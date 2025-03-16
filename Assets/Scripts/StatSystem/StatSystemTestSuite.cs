@@ -148,26 +148,69 @@ namespace PathSurvivors.Stats
         }
         
         /// <summary>
-        /// Sets up the base skill stats (for a Fireball spell)
+        /// Sets up the base skill stats based on skill type
         /// </summary>
         private void SetupSkillStats()
         {
-            // Base skill stats
+            // Core stats all skills need
             skillStats.SetBaseValue("base_damage_min", 20);
             skillStats.SetBaseValue("base_damage_max", 30);
-            skillStats.SetBaseValue("damage_effectiveness", 100); // 100% = full character damage
+            skillStats.SetBaseValue("damage_effectiveness", 100);
             skillStats.SetBaseValue("mana_cost", 15);
             skillStats.SetBaseValue("cooldown", 3.0f);
             skillStats.SetBaseValue("cast_time", 0.8f);
             skillStats.SetBaseValue("critical_strike_chance", 5.0f);
             
-            // Damage type (100% fire damage)
-            skillStats.SetBaseValue("fire_conversion", 100);
+            // Apply skill type specific stats
+            ApplySkillTypeSpecificStats();
+        }
+
+        /// <summary>
+        /// Sets up stat values based on the skill type
+        /// </summary>
+        private void ApplySkillTypeSpecificStats()
+        {
+            // Clear any previous elemental conversion values
+            skillStats.SetBaseValue("fire_conversion", 0);
+            skillStats.SetBaseValue("cold_conversion", 0);
+            skillStats.SetBaseValue("lightning_conversion", 0);
             
-            // Add skill tags
-            skillStats.SetBaseValue("is_spell", 1);  // This is a spell (not an attack)
-            skillStats.SetBaseValue("is_aoe", 1);    // This is an area of effect skill
-            skillStats.SetBaseValue("is_fire", 1);   // This deals fire damage
+            // Handle elemental damage types
+            if ((skillType & SkillStatGroup.Fire) != 0)
+            {
+                skillStats.SetBaseValue("fire_conversion", 100);
+                Debug.Log("Setting up Fire skill");
+            }
+            else if ((skillType & SkillStatGroup.Cold) != 0)
+            {
+                skillStats.SetBaseValue("cold_conversion", 100);
+                Debug.Log("Setting up Cold skill");
+            }
+            else if ((skillType & SkillStatGroup.Lightning) != 0)
+            {
+                skillStats.SetBaseValue("lightning_conversion", 100);
+                Debug.Log("Setting up Lightning skill");
+            }
+            
+            // Handle skill mechanic types
+            if ((skillType & SkillStatGroup.Projectile) != 0)
+            {
+                skillStats.SetBaseValue("projectile_count", 1);
+                skillStats.SetBaseValue("projectile_speed", 15);
+                Debug.Log("Setting up Projectile skill");
+            }
+            
+            if ((skillType & SkillStatGroup.AreaEffect) != 0)
+            {
+                skillStats.SetBaseValue("area_of_effect", 10);
+                Debug.Log("Setting up Area Effect skill");
+            }
+            
+            if ((skillType & SkillStatGroup.Duration) != 0)
+            {
+                skillStats.SetBaseValue("duration", 5.0f);
+                Debug.Log("Setting up Duration skill");
+            }
         }
         
         /// <summary>
@@ -357,20 +400,42 @@ namespace PathSurvivors.Stats
             float maxDamage = CalculateSkillDamage(false);
             float avgDamage = (minDamage + maxDamage) / 2;
             
+            // Determine the skill name based on type
+            string skillName = GetSkillNameFromType();
+            
             // Display as a temporary message
             if (skillStatsText != null)
             {
                 string originalText = skillStatsText.text;
-                skillStatsText.text = originalText + $"\n\n<color=orange>*** CASTING FIREBALL ***</color>\n" +
+                skillStatsText.text = originalText + $"\n\n<color=orange>*** CASTING {skillName} ***</color>\n" +
                     $"Damage Roll: {minDamage:F1} - {maxDamage:F1}\n" +
                     $"Average Damage: {avgDamage:F1}\n" +
                     $"Mana Cost: {skillStats.GetStatValue("mana_cost"):F0}\n" +
-                    $"Cast Time: {1 / (skillStats.GetStatValue("cast_time") * (1 + characterStats.GetStatValue("cast_speed") / 100)):F2}s";
+                    $"Cast Time: {1 / skillStats.GetStatValue("cast_time"):F2}s";
                 
                 // Reset after 3 seconds
                 CancelInvoke(nameof(ResetSkillStats));
                 Invoke(nameof(ResetSkillStats), 3.0f);
             }
+        }
+        
+        /// <summary>
+        /// Gets a skill name from the skill type
+        /// </summary>
+        private string GetSkillNameFromType()
+        {
+            // Determine element
+            string element = "Basic";
+            if ((skillType & SkillStatGroup.Fire) != 0) element = "Fire";
+            else if ((skillType & SkillStatGroup.Cold) != 0) element = "Cold";
+            else if ((skillType & SkillStatGroup.Lightning) != 0) element = "Lightning";
+            
+            // Determine mechanic
+            string mechanic = "Strike";
+            if ((skillType & SkillStatGroup.Projectile) != 0) mechanic = "Bolt";
+            else if ((skillType & SkillStatGroup.AreaEffect) != 0) mechanic = "Nova";
+            
+            return $"{element} {mechanic}";
         }
         
         /// <summary>
@@ -587,7 +652,7 @@ namespace PathSurvivors.Stats
         /// </summary>
         private float CalculateSkillDamage(bool useMinDamage)
         {
-            // Update skill stats first
+            // Update skill stats first to ensure they're current
             UpdateSkillStats();
             
             // Get final damage value
@@ -727,14 +792,31 @@ namespace PathSurvivors.Stats
                 
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
             
-            sb.AppendLine("<b>FIREBALL SKILL</b>");
+            // Get the skill name
+            string skillName = GetSkillNameFromType();
+            
+            sb.AppendLine($"<b>{skillName}</b>");
             sb.AppendLine("--------------------");
             
             // Base stats
             sb.AppendLine("<b>Base Stats:</b>");
             sb.AppendLine($"Base Damage: {skillStats.GetStatValue("base_damage_min"):F1}-{skillStats.GetStatValue("base_damage_max"):F1}");
             sb.AppendLine($"Damage Effectiveness: {skillStats.GetStatValue("damage_effectiveness"):F0}%");
-            sb.AppendLine($"Fire Conversion: {skillStats.GetStatValue("fire_conversion"):F0}%");
+            
+            // Element-specific information
+            if ((skillType & SkillStatGroup.Fire) != 0)
+            {
+                sb.AppendLine($"Fire Conversion: {skillStats.GetStatValue("fire_conversion"):F0}%");
+            }
+            else if ((skillType & SkillStatGroup.Cold) != 0)
+            {
+                sb.AppendLine($"Cold Conversion: {skillStats.GetStatValue("cold_conversion"):F0}%");
+            }
+            else if ((skillType & SkillStatGroup.Lightning) != 0)
+            {
+                sb.AppendLine($"Lightning Conversion: {skillStats.GetStatValue("lightning_conversion"):F0}%");
+            }
+            
             sb.AppendLine();
             
             // Usage stats
@@ -743,6 +825,29 @@ namespace PathSurvivors.Stats
             sb.AppendLine($"Cooldown: {skillStats.GetStatValue("cooldown"):F1}s");
             sb.AppendLine($"Cast Time: {1 / skillStats.GetStatValue("cast_time"):F2}s");
             sb.AppendLine($"Critical Strike Chance: {skillStats.GetStatValue("critical_strike_chance"):F1}%");
+            
+            // Skill type-specific stats
+            if ((skillType & SkillStatGroup.Projectile) != 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("<b>Projectile Properties:</b>");
+                sb.AppendLine($"Projectile Count: {skillStats.GetStatValue("projectile_count"):F0}");
+                sb.AppendLine($"Projectile Speed: {skillStats.GetStatValue("projectile_speed"):F0}");
+            }
+            
+            if ((skillType & SkillStatGroup.AreaEffect) != 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("<b>Area Properties:</b>");
+                sb.AppendLine($"Area of Effect: {skillStats.GetStatValue("area_of_effect"):F0}");
+            }
+            
+            if ((skillType & SkillStatGroup.Duration) != 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("<b>Duration Properties:</b>");
+                sb.AppendLine($"Duration: {skillStats.GetStatValue("duration"):F1}s");
+            }
             
             // Show detailed modifiers if debug is enabled
             if (showDetailedStats)
@@ -859,6 +964,30 @@ namespace PathSurvivors.Stats
                 case ItemRarity.Unique: return "#FFA500"; // Orange
                 case ItemRarity.Legendary: return "#FF0000"; // Red
                 default: return "#FFFFFF";
+            }
+        }
+        
+        /// <summary>
+        /// When changing the skill type, update the skill
+        /// </summary>
+        public void OnSkillTypeChanged()
+        {
+            ApplySkillTypeSpecificStats();
+            UpdateSkillStats();
+            UpdateAllUI();
+            
+            Debug.Log($"Skill type changed to: {skillType}");
+        }
+        
+        /// <summary>
+        /// Update when skill type changes in editor
+        /// </summary>
+        private void OnValidate()
+        {
+            // When running in editor, auto-update when skill type changes
+            if (Application.isPlaying && skillStats != null)
+            {
+                OnSkillTypeChanged();
             }
         }
     }
