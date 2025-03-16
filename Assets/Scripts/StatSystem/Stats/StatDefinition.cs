@@ -63,6 +63,9 @@ namespace PathSurvivors.Stats
         [Header("Basic Information")]
         [Tooltip("Unique identifier for this stat")]
         public string statId;
+        public bool isTemporary = false; // Temporary stats are not saved in the save system - NOT IMPLEMENTED
+
+        public StatCategory statCategory = StatCategory.None; // Category for this stat (e.g., Offense, Defense, etc.)
         
         [Tooltip("Human-readable name for display")]
         public string displayName;

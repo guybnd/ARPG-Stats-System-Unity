@@ -2115,7 +2115,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1198ae0f6b9b6034e833a655f3eccf1b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  statRegistry: {fileID: 11400000, guid: ac82ecd4d7b6ff34fbeb1597c48997fc, type: 2}
+  statRegistry: {fileID: 11400000, guid: aa5dddccc41631f478006cf6a3e21eeb, type: 2}
   characterStatsText: {fileID: 1761381843}
   skillStatsText: {fileID: 470101478}
   itemStatsText: {fileID: 34061039}
@@ -2124,6 +2124,8 @@ MonoBehaviour:
   unequipButton: {fileID: 1833077457}
   castSkillButton: {fileID: 675433783}
   showDebugToggle: {fileID: 1888077057}
+  skillType: 519
+  skillStatRegistry: {fileID: 11400000, guid: 21140bfaad022a245afa9fffee401d45, type: 2}
 --- !u!4 &1753585168
 Transform:
   m_ObjectHideFlags: 0

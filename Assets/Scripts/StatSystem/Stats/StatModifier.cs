@@ -63,7 +63,8 @@ namespace PathSurvivors.Stats
         public StatModifier() 
         {
             modifierId = Guid.NewGuid().ToString();
-            creationTime = Time.time;
+            // Don't set creationTime in constructor as it causes serialization issues
+            // It will be initialized when actually used
         }
         
         /// <summary>
@@ -77,7 +78,20 @@ namespace PathSurvivors.Stats
             this.source = source;
             this.modifierId = Guid.NewGuid().ToString();
             this.duration = duration;
-            this.creationTime = Time.time;
+            // Don't set creationTime in constructor as it causes serialization issues
+            // It will be initialized when actually used
+        }
+        
+        /// <summary>
+        /// Ensures the creation time is properly initialized if it's not already
+        /// </summary>
+        public void EnsureInitialized()
+        {
+            // Only set creationTime if it hasn't been set yet (is zero or negative)
+            if (creationTime <= 0)
+            {
+                creationTime = Time.time;
+            }
         }
         
         /// <summary>
