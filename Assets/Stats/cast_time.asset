@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be20762afa663484a8b30830b5576215, type: 3}
+  m_Name: cast_time
+  m_EditorClassIdentifier: 
+  statId: cast_time
+  displayName: Cast Time
+  description: Base time to cast the skill (modified by cast speed)
+  categories: 32
+  defaultValue: 0.8
+  isInteger: 0
+  minValue: 0.1
+  maxValue: 10
+  formatString: '{0:F2}s'
+  icon: {fileID: 0}
+  color: {r: 0, g: 1, b: 1, a: 1}
+  aliases: []

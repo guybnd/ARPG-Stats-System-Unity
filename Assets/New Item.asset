@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4c8f21024d7f96a4b8ee476a7d22120b, type: 3}
+  m_Name: New Item
+  m_EditorClassIdentifier: 
+  itemId: 
+  displayName: 
+  description: 
+  icon: {fileID: 0}
+  rarity: 0
+  category: 0
+  itemType: 0
+  levelRequirement: 1
+  value: 1
+  isStackable: 0
+  maxStackSize: 1
+  isEquippable: 0
+  equipSlot: 
+  isConsumable: 0
+  useCooldown: 0
+  effectDuration: 0
+  implicitModifiers:
+  - statId: minPhysDmg
+    minValue: 0
+    maxValue: 0
+    value: 5
+    applicationMode: 0
+    modifierType: 0
+    scope: 0
+    tier: 0
+  - statId: maxPhysDmg
+    minValue: 0
+    maxValue: 0
+    value: 10
+    applicationMode: 0
+    modifierType: 0
+    scope: 0
+    tier: 0
+  explicitModifiers:
+  - statId: incPhysDmg
+    minValue: 0
+    maxValue: 0
+    value: 200
+    applicationMode: 0
+    modifierType: 2
+    scope: 0
+    tier: 0
+  - statId: 
+    minValue: 0
+    maxValue: 0
+    value: 0
+    applicationMode: 0
+    modifierType: 0
+    scope: 0
+    tier: 0
