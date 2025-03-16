@@ -36,62 +36,61 @@ namespace PathSurvivors.Stats.Editor
             List<StatDefinition> definitions = new List<StatDefinition>();
             
             // Core attributes
-            definitions.Add(CreateStatDefinition("strength", "Strength", "Increases physical damage and carrying capacity", 
+            definitions.Add(CreateStatDefinition("strength", "Strength", "Increases Maximum Life and Armour", 
                 StatCategory.Attribute, 10, 0, 1000, "{0}", Color.red));
                 
-            definitions.Add(CreateStatDefinition("intelligence", "Intelligence", "Increases spell damage and mana pool", 
+            definitions.Add(CreateStatDefinition("intelligence", "Intelligence", "Increases damage and Deflection", 
                 StatCategory.Attribute, 10, 0, 1000, "{0}", Color.blue));
                 
-            definitions.Add(CreateStatDefinition("dexterity", "Dexterity", "Increases evasion and critical chance", 
+            definitions.Add(CreateStatDefinition("dexterity", "Dexterity", "Increases evasion and accuracy", 
                 StatCategory.Attribute, 10, 0, 1000, "{0}", Color.green));
             
             // Resources
-            definitions.Add(CreateStatDefinition("health", "Health", "Character's life force", 
+            definitions.Add(CreateStatDefinition("life", "Life", "Character's life force", 
                 StatCategory.Resource, 100, 0, 9999, "{0}", Color.red, true));
                 
             definitions.Add(CreateStatDefinition("mana", "Mana", "Energy for casting spells", 
                 StatCategory.Resource, 50, 0, 9999, "{0}", Color.blue, true));
             
             // Damage stats
-            definitions.Add(CreateStatDefinition("physical_damage_min", "Physical Damage (Min)", "Minimum physical damage dealt", 
+            definitions.Add(CreateStatDefinition("minPhysDmg", "Physical Damage (Min)", "Minimum physical damage dealt", 
                 StatCategory.Offense | StatCategory.Physical, 5, 0, 9999, "{0}", new Color(0.8f, 0.8f, 0.8f)));
                 
-            definitions.Add(CreateStatDefinition("physical_damage_max", "Physical Damage (Max)", "Maximum physical damage dealt", 
+            definitions.Add(CreateStatDefinition("maxPhysDmg", "Physical Damage (Max)", "Maximum physical damage dealt", 
                 StatCategory.Offense | StatCategory.Physical, 10, 0, 9999, "{0}", new Color(0.8f, 0.8f, 0.8f)));
                 
-            definitions.Add(CreateStatDefinition("spell_damage", "Spell Damage", "Percentage increase to spell damage", 
+            definitions.Add(CreateStatDefinition("dmgWithSpells", "Spell Damage", "Percentage increase to spell damage", 
                 StatCategory.Offense, 0, 0, 9999, "+{0}%", new Color(0.5f, 0.5f, 1f)));
                 
-            definitions.Add(CreateStatDefinition("fire_damage", "Fire Damage", "Percentage increase to fire damage", 
+            definitions.Add(CreateStatDefinition("dmgWithFire", "Fire Damage", "Percentage increase to fire damage", 
                 StatCategory.Offense | StatCategory.Fire, 0, 0, 9999, "+{0}%", new Color(1f, 0.5f, 0f)));
             
             // Utility stats
-            definitions.Add(CreateStatDefinition("attack_speed", "Attack Speed", "Attacks per second", 
+            definitions.Add(CreateStatDefinition("attackSpeed", "Attack Speed", "Attacks per second", 
                 StatCategory.Offense, 1.0f, 0.1f, 10f, "{0:F2}/s", Color.yellow));
                 
-            definitions.Add(CreateStatDefinition("cast_speed", "Cast Speed", "Percentage increase to casting speed", 
+            definitions.Add(CreateStatDefinition("castSpeed", "Cast Speed", "Percentage increase to casting speed", 
                 StatCategory.Offense, 0, -90, 900, "+{0}%", new Color(0.7f, 0.7f, 1f)));
                 
-            definitions.Add(CreateStatDefinition("critical_strike_chance", "Critical Strike Chance", "Percentage chance to deal critical hits", 
+            definitions.Add(CreateStatDefinition("baseCritChance", "Critical Strike Chance", "Percentage chance to deal critical hits", 
+                StatCategory.Offense, 5, 0, 100, "{0}%", new Color(1f, 1f, 0.5f)));
+
+            definitions.Add(CreateStatDefinition("increasedCritChance", "Critical Strike Chance", "Percentage chance to deal critical hits", 
                 StatCategory.Offense, 5, 0, 100, "{0}%", new Color(1f, 1f, 0.5f)));
                 
-            definitions.Add(CreateStatDefinition("damage_multiplier", "Damage Multiplier", "Percentage multiplier to all damage", 
+            definitions.Add(CreateStatDefinition("dmgMulti", "Damage Multiplier", "Percentage multiplier to all damage", 
                 StatCategory.Offense, 100, 0, 9999, "{0}%", new Color(1f, 0.5f, 0.5f)));
 
-            // Skill stats for fireball
-            definitions.Add(CreateStatDefinition("base_damage_min", "Base Damage (Min)", "Minimum base damage of the skill", 
-                StatCategory.SkillCore | StatCategory.Offense, 20, 0, 9999, "{0}", Color.white));
+            // Skill stats
+    
                 
-            definitions.Add(CreateStatDefinition("base_damage_max", "Base Damage (Max)", "Maximum base damage of the skill", 
-                StatCategory.SkillCore | StatCategory.Offense, 30, 0, 9999, "{0}", Color.white));
-                
-            definitions.Add(CreateStatDefinition("damage_effectiveness", "Damage Effectiveness", "How effectively this skill uses added damage", 
+            definitions.Add(CreateStatDefinition("dmgEffectiveness", "Damage Effectiveness", "How effectively this skill uses added damage", 
                 StatCategory.SkillCore, 100, 0, 9999, "{0}%", Color.white));
                 
-            definitions.Add(CreateStatDefinition("fire_conversion", "Fire Conversion", "Percentage of damage converted to fire", 
+            definitions.Add(CreateStatDefinition("fireConversion", "Fire Conversion", "Percentage of damage converted to fire", 
                 StatCategory.SkillCore | StatCategory.Fire, 100, 0, 100, "{0}%", new Color(1f, 0.5f, 0f)));
                 
-            definitions.Add(CreateStatDefinition("mana_cost", "Mana Cost", "Mana required to use the skill", 
+            definitions.Add(CreateStatDefinition("skillCost", "Energy Cost", "Energy required to use the skill", 
                 StatCategory.SkillCore | StatCategory.Resource, 15, 0, 999, "{0}", Color.blue, true));
                 
             definitions.Add(CreateStatDefinition("cooldown", "Cooldown", "Time between uses of the skill", 
@@ -104,8 +103,8 @@ namespace PathSurvivors.Stats.Editor
             definitions.Add(CreateStatDefinition("armor", "Armor", "Physical damage reduction", 
                 StatCategory.Defense | StatCategory.Physical, 0, 0, 99999, "{0}", new Color(0.7f, 0.7f, 0.7f), true));
                 
-            definitions.Add(CreateStatDefinition("fire_resistance", "Fire Resistance", "Percentage of fire damage reduced", 
-                StatCategory.Defense | StatCategory.Fire, 0, -100, 90, "{0}%", new Color(1f, 0.3f, 0.1f)));
+            definitions.Add(CreateStatDefinition("fireResistance", "Fire Resistance", "Percentage of fire damage reduced", 
+                StatCategory.Defense | StatCategory.Fire, 0, -100, 80, "{0}%", new Color(1f, 0.3f, 0.1f)));
 
             // Add all definitions to the registry
             SerializedObject registryObj = new SerializedObject(registry);
