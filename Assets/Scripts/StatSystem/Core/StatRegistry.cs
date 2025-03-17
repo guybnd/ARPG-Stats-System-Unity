@@ -26,6 +26,15 @@ namespace PathSurvivors.Stats
         private void OnEnable()
         {
             RebuildLookup();
+            
+            // Register all extensions from all stat definitions
+            foreach (var definition in statDefinitions)
+            {
+                if (definition == null) continue;
+                
+                // Use the full registration method instead of just registering conditional stats
+                RegisterExtensionsForStat(definition);
+            }
         }
         
         /// <summary>
@@ -301,31 +310,56 @@ namespace PathSurvivors.Stats
         public void RegisterConditionalStat(string baseStatId, StatCategory conditions, string displaySuffix)
         {
             if (string.IsNullOrEmpty(baseStatId) || conditions == StatCategory.None)
-                return;
-
-            // Make sure the base stat exists
-            if (!IsStatRegistered(baseStatId))
             {
-                Debug.LogError($"Cannot register conditional stat for {baseStatId}: Base stat is not registered");
+                Debug.LogWarning($"Cannot register conditional stat: Invalid baseStatId or empty conditions");
                 return;
             }
 
+            // Check if base stat exists
+            if (!IsStatRegistered(baseStatId))
+            {
+                Debug.LogWarning($"Cannot register conditional stat for {baseStatId}: Base stat is not registered");
+                return;
+            }
+            
+            // Create the conditional definition
             var conditional = new ConditionalStatDefinition(baseStatId, conditions, displaySuffix);
-            conditionalStats.Add(conditional);
-
-            // Update lookup
+            
+            // Add to collections if not already present
             if (!conditionalStatsLookup.ContainsKey(baseStatId))
             {
                 conditionalStatsLookup[baseStatId] = new List<ConditionalStatDefinition>();
             }
-            conditionalStatsLookup[baseStatId].Add(conditional);
-
+            
+            // Check if this conditional definition already exists
+            if (!conditionalStatsLookup[baseStatId].Exists(c => 
+                c.conditions == conditions && c.displaySuffix == displaySuffix))
+            {
+                conditionalStatsLookup[baseStatId].Add(conditional);
+                conditionalStats.Add(conditional);
+            }
+            
+            // IMPORTANT: Register the extended stat ID as an alias to the base stat
+            // This ensures that modifiers targeting the extended stat ID will work
+            string extendedStatId = GetExtendedStatId(baseStatId, conditions);
+            if (!statAliases.ContainsKey(extendedStatId) && !statDefinitionLookup.ContainsKey(extendedStatId))
+            {
+                RegisterStatAlias(extendedStatId, baseStatId);
+                Debug.Log($"Registered extended stat ID: {extendedStatId} -> {baseStatId}");
+            }
+            
             #if UNITY_EDITOR
             if (Application.isEditor && !Application.isPlaying)
             {
                 UnityEditor.EditorUtility.SetDirty(this);
             }
             #endif
+        }
+
+        // Helper method to consistently generate extended stat IDs
+        public string GetExtendedStatId(string baseStatId, StatCategory categories)
+        {
+            return $"{baseStatId}_{categories}";
         }
 
         /// <summary>
@@ -362,13 +396,14 @@ namespace PathSurvivors.Stats
                 // Register each extension as a conditional stat
                 RegisterConditionalStat(definition.statId, extension.requiredCategories, extension.displaySuffix);
                 
-                // Also register the extended stat ID directly to ensure it can be found
-                string extendedStatId = extension.GetExtendedStatId(definition.statId);
+                // Also ensure the extended stat ID is properly registered
+                string extendedStatId = GetExtendedStatId(definition.statId, extension.requiredCategories);
                 
                 // Make sure the extended stat ID points to the base stat definition
-                if (!statDefinitionLookup.ContainsKey(extendedStatId))
+                if (!statAliases.ContainsKey(extendedStatId) && !statDefinitionLookup.ContainsKey(extendedStatId))
                 {
                     RegisterStatAlias(extendedStatId, definition.statId);
+                    Debug.Log($"Registered extension stat alias: {extendedStatId} -> {definition.statId}");
                     
                     #if UNITY_EDITOR
                     if (Application.isEditor && !Application.isPlaying)
@@ -376,6 +411,37 @@ namespace PathSurvivors.Stats
                         UnityEditor.EditorUtility.SetDirty(this);
                     }
                     #endif
+                }
+            }
+        }
+
+        public void LogRegisteredStats()
+        {
+            Debug.Log("=== Registered Stats ===");
+            foreach (var entry in statDefinitionLookup)
+            {
+                Debug.Log($"Stat: {entry.Key} -> {entry.Value.displayName}");
+            }
+            
+            Debug.Log("=== Stat Aliases ===");
+            foreach (var entry in statAliases)
+            {
+                Debug.Log($"Alias: {entry.Key} -> {entry.Value}");
+            }
+            
+            Debug.Log("=== Conditional Stats ===");
+            foreach (var entry in conditionalStatsLookup)
+            {
+                foreach (var conditional in entry.Value)
+                {
+                    string extendedId = GetExtendedStatId(entry.Key, conditional.conditions);
+                    Debug.Log($"Conditional: {extendedId} ({entry.Key} {conditional.displaySuffix})");
+                    
+                    // Check if this extended ID is properly registered as an alias
+                    if (!statAliases.ContainsKey(extendedId) && !statDefinitionLookup.ContainsKey(extendedId))
+                    {
+                        Debug.LogError($"Extended stat ID {extendedId} is not registered properly!");
+                    }
                 }
             }
         }

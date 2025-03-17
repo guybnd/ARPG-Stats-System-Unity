@@ -273,11 +273,11 @@ namespace PathSurvivors.Stats
                 // Critical strike chance with fire skills
                 new ItemStatModifier
                 {
-                    statId = "critical_strike_chance_with_fire",
+                    statId = "critical_strike_chance_Fire",
                     minValue = 50,
                     maxValue = 100,
                     value = 75,
-                    applicationMode = StatApplicationMode.Additive,
+                    applicationMode = StatApplicationMode.PercentageAdditive,
                     modifierType = ItemModifierType.Suffix,
                     scope = ModifierScope.Global,
                     tier = 1
