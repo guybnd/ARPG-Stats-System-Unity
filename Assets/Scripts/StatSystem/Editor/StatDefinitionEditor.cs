@@ -46,6 +46,7 @@ namespace PathSurvivors.Stats.Editor
         {
             serializedObject.Update();
 
+            EditorGUILayout.Space(5);
             EditorGUILayout.LabelField("Basic Information", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(statIdProp);
             EditorGUILayout.PropertyField(isTemporaryProp);
@@ -60,7 +61,7 @@ namespace PathSurvivors.Stats.Editor
             showExtensions = EditorGUILayout.Foldout(showExtensions, "Stat Extensions", true);
             if (showExtensions)
             {
-                EditorGUI.indentLevel++;
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
                 
                 EditorGUILayout.PropertyField(extensionsProp);
                 
@@ -76,7 +77,7 @@ namespace PathSurvivors.Stats.Editor
                 }
                 EditorGUILayout.EndHorizontal();
                 
-                EditorGUI.indentLevel--;
+                EditorGUILayout.EndVertical();
             }
 
             EditorGUILayout.Space(10);

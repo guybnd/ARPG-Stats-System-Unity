@@ -85,6 +85,8 @@ namespace PathSurvivors.Stats
             registry.RegisterStat("critical_strike_chance", "Critical Strike Chance", 5f, 0f, 100f, StatCategory.Offense);
             registry.RegisterStat("critical_strike_multiplier", "Critical Strike Multiplier", 150f, 100f, 1000f, StatCategory.Offense);
             registry.RegisterStat("added_critical_strike_chance", "Added Critical Strike Chance", 0f, 0f, 500f, StatCategory.Offense);
+            registry.RegisterStat("critical_strike_chance_with_fire", "Critical Strike Chance with Fire", 0f, 0f, 100f, StatCategory.Offense | StatCategory.Fire);
+            registry.RegisterStat("increased_critical_strike_with_elemental", "Increased Critical Strike with Elemental", 0f, 0f, 500f, StatCategory.Offense | StatCategory.Elemental);
             
             // Movement
             registry.RegisterStat("movement_speed", "Movement Speed", 100f, 10f, 500f, StatCategory.Utility);

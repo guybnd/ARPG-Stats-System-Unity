@@ -18,10 +18,10 @@ MonoBehaviour:
   description: Percentage chance to deal critical hits
   categories: 4
   extensions:
-  - requiredCategories: 0
-    displaySuffix: 
-  - requiredCategories: 0
-    displaySuffix: New Extension
+  - requiredCategories: 65536
+    displaySuffix: with fire skills
+  - requiredCategories: 1048576
+    displaySuffix: with elemental
   defaultValue: 0
   isInteger: 0
   minValue: 0

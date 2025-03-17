@@ -42,6 +42,7 @@ namespace PathSurvivors.Stats
                 if (definition != null && !string.IsNullOrEmpty(definition.statId))
                 {
                     statDefinitionLookup[definition.statId] = definition;
+                    RegisterExtensionsForStat(definition);
                 }
             }
 
@@ -95,6 +96,9 @@ namespace PathSurvivors.Stats
                 existingDef.maxValue = maxValue;
                 existingDef.categories = categories;
                 
+                // Register/update extensions for this existing stat
+                RegisterExtensionsForStat(existingDef);
+                
                 #if UNITY_EDITOR
                 if (Application.isEditor && !Application.isPlaying)
                 {
@@ -118,11 +122,15 @@ namespace PathSurvivors.Stats
             statDefinitions.Add(definition);
             statDefinitionLookup[statId] = definition;
             
+            // Register any extensions defined for this stat
+            RegisterExtensionsForStat(definition);
+            
             #if UNITY_EDITOR
             // Mark the asset as dirty in the editor
             if (Application.isEditor && !Application.isPlaying)
             {
                 UnityEditor.EditorUtility.SetDirty(this);
+                UnityEditor.EditorUtility.SetDirty(definition);
             }
             #endif
         }
@@ -339,6 +347,37 @@ namespace PathSurvivors.Stats
         {
             var conditionals = GetConditionalStats(baseStatId);
             return conditionals.Where(c => (c.conditions & categories) == c.conditions).ToList();
+        }
+
+        /// <summary>
+        /// Registers all extensions from a StatDefinition as conditional stats
+        /// </summary>
+        private void RegisterExtensionsForStat(StatDefinition definition)
+        {
+            if (definition == null || definition.extensions == null)
+                return;
+                
+            foreach (var extension in definition.extensions)
+            {
+                // Register each extension as a conditional stat
+                RegisterConditionalStat(definition.statId, extension.requiredCategories, extension.displaySuffix);
+                
+                // Also register the extended stat ID directly to ensure it can be found
+                string extendedStatId = extension.GetExtendedStatId(definition.statId);
+                
+                // Make sure the extended stat ID points to the base stat definition
+                if (!statDefinitionLookup.ContainsKey(extendedStatId))
+                {
+                    RegisterStatAlias(extendedStatId, definition.statId);
+                    
+                    #if UNITY_EDITOR
+                    if (Application.isEditor && !Application.isPlaying)
+                    {
+                        UnityEditor.EditorUtility.SetDirty(this);
+                    }
+                    #endif
+                }
+            }
         }
     }
 }

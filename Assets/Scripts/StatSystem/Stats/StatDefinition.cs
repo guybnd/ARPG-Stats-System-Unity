@@ -215,6 +215,13 @@ namespace PathSurvivors.Stats
             }
 
             extensions.Add(new StatExtension(categories, suffix));
+            
+            // Register the extension with the registry if we can find it
+            var registry = Resources.FindObjectsOfTypeAll<StatRegistry>();
+            if (registry != null && registry.Length > 0)
+            {
+                registry[0].RegisterConditionalStat(statId, categories, suffix);
+            }
         }
 
         /// <summary>

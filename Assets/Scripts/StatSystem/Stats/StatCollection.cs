@@ -99,12 +99,35 @@ namespace PathSurvivors.Stats
             // Hook up event handler
             statValue.OnValueChanged += OnStatValueChanged;
             
+            // Apply extensions
+            ApplyStatExtensions(statValue);
+            
             if (debugStats)
             {
                 Debug.Log($"[{ownerName}] Created stat {normalizedId} with default value {definition.defaultValue}");
             }
             
             return statValue;
+        }
+        
+        /// <summary>
+        /// Applies extensions to a stat value based on its definition
+        /// </summary>
+        private void ApplyStatExtensions(StatValue statValue)
+        {
+            var definition = statValue.Definition;
+            if (definition == null || definition.extensions == null || definition.extensions.Count == 0)
+                return;
+        
+            foreach (var extension in definition.extensions)
+            {
+                var extendedStatId = extension.GetExtendedStatId(definition.statId);
+                var extendedStat = GetOrCreateStat(extendedStatId);
+                if (extendedStat != null)
+                {
+                    extendedStat.BaseValue = statValue.BaseValue;
+                }
+            }
         }
         
         /// <summary>

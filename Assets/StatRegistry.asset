@@ -52,3 +52,34 @@ MonoBehaviour:
   - {fileID: 11400000, guid: a9a56a1bc854646409c6c91e87f4c0b0, type: 2}
   - {fileID: 11400000, guid: 935ea767ad6be06498784481f778bbe7, type: 2}
   - {fileID: 11400000, guid: 14d2c22c48869a84eb870a196941360b, type: 2}
+  conditionalStats:
+  - baseStatId: critical_strike_chance
+    conditions: 65536
+    displaySuffix: with fire skills
+  - baseStatId: critical_strike_chance
+    conditions: 1048576
+    displaySuffix: with elemental
+  - baseStatId: critical_strike_chance
+    conditions: 65536
+    displaySuffix: with fire skills
+  - baseStatId: critical_strike_chance
+    conditions: 1048576
+    displaySuffix: with elemental
+  - baseStatId: critical_strike_chance
+    conditions: 65536
+    displaySuffix: with fire skills
+  - baseStatId: critical_strike_chance
+    conditions: 1048576
+    displaySuffix: with elemental
+  - baseStatId: critical_strike_chance
+    conditions: 65536
+    displaySuffix: with fire skills
+  - baseStatId: critical_strike_chance
+    conditions: 1048576
+    displaySuffix: with elemental
+  - baseStatId: critical_strike_chance
+    conditions: 65536
+    displaySuffix: with fire skills
+  - baseStatId: critical_strike_chance
+    conditions: 1048576
+    displaySuffix: with elemental

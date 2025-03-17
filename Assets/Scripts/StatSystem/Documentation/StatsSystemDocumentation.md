@@ -104,6 +104,23 @@ skillStats.SetBaseValue("cast_time", 1.5f);
 float damageValue = skillStats.GetStatValue("fire_damage");
 ```
 
+### Extended Stats
+
+The system supports extended stats that are specific to certain categories or damage types. For example:
+
+```csharp
+// Basic critical strike chance (applies to all damage)
+critical_strike_chance = 5% (base) + added_critical_strike_chance
+
+// Critical strike chance with specific damage types
+critical_strike_chance_with_fire = critical_strike_chance + flat_bonus
+
+// Critical strike scaling with damage categories
+increased_critical_strike_with_elemental = 100% (would double the crit chance)
+```
+
+These extended stats allow for more specialized builds and item modifiers.
+
 ## Working with Categories
 
 Categories are a powerful feature that organize stats into logical groups. They allow:

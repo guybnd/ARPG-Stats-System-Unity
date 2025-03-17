@@ -270,7 +270,18 @@ namespace PathSurvivors.Stats
                     scope = ModifierScope.Global,
                     tier = 1
                 },
-                // ...existing code...
+                // Critical strike chance with fire skills
+                new ItemStatModifier
+                {
+                    statId = "critical_strike_chance_with_fire",
+                    minValue = 50,
+                    maxValue = 100,
+                    value = 75,
+                    applicationMode = StatApplicationMode.Additive,
+                    modifierType = ItemModifierType.Suffix,
+                    scope = ModifierScope.Global,
+                    tier = 1
+                }
             };
             
             staff.Initialize();
