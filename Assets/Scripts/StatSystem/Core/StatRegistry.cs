@@ -104,6 +104,7 @@ namespace PathSurvivors.Stats
                 existingDef.minValue = minValue;
                 existingDef.maxValue = maxValue;
                 existingDef.categories = categories;
+                existingDef.registry = this;
                 
                 // Register/update extensions for this existing stat
                 RegisterExtensionsForStat(existingDef);
@@ -126,7 +127,8 @@ namespace PathSurvivors.Stats
             definition.minValue = minValue;
             definition.maxValue = maxValue;
             definition.categories = categories;
-            
+            definition.registry = this;
+
             // Add to collections
             statDefinitions.Add(definition);
             statDefinitionLookup[statId] = definition;
@@ -169,6 +171,64 @@ namespace PathSurvivors.Stats
                 UnityEditor.EditorUtility.SetDirty(this);
             }
             #endif
+        }
+
+        /// <summary>
+        /// Updates conditional stat values when a stat's categories change
+        /// </summary>
+        /// <param name="collection">The stat collection to update</param>
+        /// <param name="statId">The base stat ID whose categories changed</param>
+        /// <param name="newCategories">The new categories for the stat</param>
+        public void UpdateConditionalStatsForCategoryChange(StatCollection collection, string statId, StatCategory newCategories)
+        {
+            if (collection == null || string.IsNullOrEmpty(statId))
+                return;
+                
+            // Get the base stat
+            var baseStatValue = collection.GetOrCreateStat(statId);
+            if (baseStatValue == null)
+                return;
+                
+            // Get all conditional stats for this base stat
+            var conditionals = GetConditionalStats(statId);
+            if (conditionals.Count == 0)
+                return;
+
+            // Keep track of whether any conditionals actually changed state
+            bool anyChanged = false;
+                
+            // For each conditional stat, check if its conditions are now met or unmet
+            foreach (var conditional in conditionals)
+            {
+                string extendedStatId = GetExtendedStatId(statId, conditional.conditions);
+                
+                // Skip this conditional stat if it's not actually registered or if collection doesn't have it
+                if (!collection.HasStat(extendedStatId) && !IsStatRegistered(extendedStatId))
+                    continue;
+                    
+                var conditionalStat = collection.GetOrCreateStat(extendedStatId);
+                if (conditionalStat == null)
+                    continue;
+                
+                // Ensure the conditional stat has the same base value as the parent
+                conditionalStat.BaseValue = baseStatValue.BaseValue;
+                
+                // Check if this conditional now applies or no longer applies
+                bool conditionsMet = (newCategories & conditional.conditions) == conditional.conditions;
+                
+                // If the stat exists and its value would change based on these conditions,
+                // mark that we need to recalculate the base stat
+                anyChanged = true;
+                
+                // Force recalculation of the conditional stat with updated categories
+                conditionalStat.SetCategories(newCategories);
+            }
+            
+            if (anyChanged)
+            {
+                // Force the base stat to recalculate its value with new categories
+                baseStatValue.RecalculateValue();
+            }
         }
         
         /// <summary>

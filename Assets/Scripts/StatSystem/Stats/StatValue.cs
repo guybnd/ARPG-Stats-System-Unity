@@ -20,9 +20,12 @@ namespace PathSurvivors.Stats
         private StatCategory currentCategories = StatCategory.None;
 
         public event Action<StatValue> OnValueChanged;
+        public event Action<StatValue, StatCategory> OnCategoriesChanged;
 
         public string StatId => definition?.statId;
         public StatDefinition Definition => definition;
+        public StatCategory CurrentCategories => currentCategories;
+        
         public float BaseValue 
         {
             get => baseValue;
@@ -59,8 +62,12 @@ namespace PathSurvivors.Stats
         {
             if (currentCategories != categories)
             {
+                StatCategory oldCategories = currentCategories;
                 currentCategories = categories;
                 MarkDirty();
+                
+                // Notify about category change
+                OnCategoriesChanged?.Invoke(this, oldCategories);
             }
         }
 
@@ -146,14 +153,57 @@ namespace PathSurvivors.Stats
             return modifiers.Where(m => m.applicationMode == mode).ToList();
         }
 
-        private void RecalculateValue()
+        /// <summary>
+        /// Determines if a modifier should be applied based on current categories
+        /// </summary>
+        private bool ShouldApplyModifier(StatModifier modifier)
+        {
+            if (definition == null || definition.registry == null)
+                return true;
+                
+            // Get the un-normalized stat ID (original target)
+            string targetStatId = modifier.statId;
+            
+            // If this is a base stat modifier (not conditional), always apply it
+            if (targetStatId == definition.statId)
+                return true;
+                
+            // Look for conditional stat definitions matching this modifier's target
+            var conditionals = definition.registry.GetConditionalStats(definition.statId);
+            foreach (var conditional in conditionals)
+            {
+                // If this modifier targets this conditional stat
+                if (conditional.GetExtendedStatId() == targetStatId)
+                {
+                    // Only apply if ALL required categories are present
+                    return (currentCategories & conditional.conditions) == conditional.conditions;
+                }
+            }
+            
+            // By default, if we don't recognize this as a conditional mod, apply it
+            return true;
+        }
+
+        /// <summary>
+        /// Recalculates the current value of the stat
+        /// </summary>
+        public void RecalculateValue()
         {
             float finalValue = baseValue;
             float sumPercentageAdditive = 0;
 
-            // Process regular modifiers
-            foreach (var modifier in modifiers)
+            // Sort modifiers by application mode to ensure consistent calculation order
+            var sortedModifiers = modifiers
+                .OrderBy(m => (int)m.applicationMode)
+                .ToList();
+
+            // Process modifiers
+            foreach (var modifier in sortedModifiers)
             {
+                // Skip inactive modifiers or those that don't apply due to categories
+                if (!modifier.isActive || !ShouldApplyModifier(modifier))
+                    continue;
+
                 switch (modifier.applicationMode)
                 {
                     case StatApplicationMode.Additive:
@@ -172,7 +222,7 @@ namespace PathSurvivors.Stats
                 }
             }
 
-            // Apply percentage based increases
+            // Apply percentage based increases after all additives
             if (!Mathf.Approximately(sumPercentageAdditive, 0))
             {
                 finalValue *= (1 + sumPercentageAdditive / 100f);
@@ -184,7 +234,13 @@ namespace PathSurvivors.Stats
                 finalValue = definition.ConstrainValue(finalValue);
             }
 
-            cachedValue = finalValue;
+            // Only update if the value actually changed
+            if (!Mathf.Approximately(cachedValue, finalValue))
+            {
+                cachedValue = finalValue;
+                // We don't call OnValueChanged here because MarkDirty already does that
+            }
+            
             isDirty = false;
         }
 

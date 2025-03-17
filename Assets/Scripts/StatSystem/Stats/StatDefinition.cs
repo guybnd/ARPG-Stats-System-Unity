@@ -145,7 +145,11 @@ namespace PathSurvivors.Stats
         [Header("Advanced Settings")]
         [Tooltip("Additional identifiers that map to this stat (for compatibility)")]
         public List<string> aliases = new List<string>();
-        
+
+        // Reference to the registry that owns this definition
+        [HideInInspector]
+        public StatRegistry registry;
+
         /// <summary>
         /// Formats the value according to the format string
         /// </summary>

@@ -96,15 +96,15 @@ namespace PathSurvivors.Stats
             var statValue = new StatValue(definition, definition.defaultValue);
             stats[normalizedId] = statValue;
             
-            // Hook up event handler
+            // Hook up event handlers
             statValue.OnValueChanged += OnStatValueChanged;
+            statValue.OnCategoriesChanged += OnStatCategoriesChanged;
             
             // Apply extensions
             ApplyStatExtensions(statValue);
             
             if (debugStats)
             {
-                Debug.Log($"[{ownerName}] Created stat {normalizedId} with default value {definition.defaultValue}");
             }
             
             return statValue;
@@ -128,6 +128,26 @@ namespace PathSurvivors.Stats
                     extendedStat.BaseValue = statValue.BaseValue;
                 }
             }
+        }
+        
+        /// <summary>
+        /// Handles when a stat's categories change
+        /// </summary>
+        private void OnStatCategoriesChanged(StatValue stat, StatCategory oldCategories)
+        {
+            if (stat == null || string.IsNullOrEmpty(stat.StatId))
+                return;
+                
+            // Update any conditional stats related to this stat
+            registry.UpdateConditionalStatsForCategoryChange(this, stat.StatId, stat.CurrentCategories);
+            
+            if (debugStats)
+            {
+                Debug.Log($"[{ownerName}] Stat {stat.StatId} categories changed from {oldCategories} to {stat.CurrentCategories}");
+            }
+            
+            // Notify listeners
+            OnStatValueChanged(stat);
         }
         
         /// <summary>
@@ -216,6 +236,28 @@ namespace PathSurvivors.Stats
             {
                 stat.BaseValue = value;
                 
+                if (debugStats)
+                {
+                    Debug.Log($"[{ownerName}] Set base value for {statId} to {value}, new total: {stat.Value}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Sets the base value of a stat if it's registered in the registry
+        /// </summary>
+        public void SetStatValue(string statId, float value)
+        {
+            if (string.IsNullOrEmpty(statId))
+                return;
+
+            string normalizedId = registry.NormalizeStatId(statId);
+
+            var stat = GetOrCreateStat(normalizedId);
+            if (stat != null)
+            {
+                stat.BaseValue = value;
+
                 if (debugStats)
                 {
                     Debug.Log($"[{ownerName}] Set base value for {statId} to {value}, new total: {stat.Value}");
