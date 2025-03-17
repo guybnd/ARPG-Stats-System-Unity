@@ -10,19 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: be20762afa663484a8b30830b5576215, type: 3}
-  m_Name: attack_speed
+  m_Name: fireConversion
   m_EditorClassIdentifier: 
-  statId: attack_speed
+  statId: fireConversion
   isTemporary: 0
   statCategory: 0
-  displayName: Attack Speed
-  description: Attacks per second
-  categories: 4
-  defaultValue: 0
+  displayName: Fire Conversion
+  description: Percentage of damage converted to fire
+  categories: 2080
+  defaultValue: 100
   isInteger: 0
-  minValue: 0.1
-  maxValue: 10
-  formatString: '{0:F2}/s'
+  minValue: 0
+  maxValue: 100
+  formatString: '{0}%'
   icon: {fileID: 0}
-  color: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  color: {r: 1, g: 0.5, b: 0, a: 1}
   aliases: []

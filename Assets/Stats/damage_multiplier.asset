@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: damage_multiplier
   m_EditorClassIdentifier: 
   statId: damage_multiplier
+  isTemporary: 0
   displayName: Damage Multiplier
   description: Percentage multiplier to all damage
   categories: 4

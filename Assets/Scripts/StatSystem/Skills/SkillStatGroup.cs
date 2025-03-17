@@ -3,7 +3,7 @@ using System;
 namespace PathSurvivors.Stats.Skills
 {
     /// <summary>
-    /// Defines groups of related skill stats
+    /// Flag-based enum that defines categories of stats for skills
     /// </summary>
     [Flags]
     public enum SkillStatGroup
@@ -18,20 +18,19 @@ namespace PathSurvivors.Stats.Skills
         Combat = 1 << 6,         // General combat stats like crit
         AreaDamage = 1 << 7,     // AOE damage stats
         Melee = 1 << 8,          // Melee-specific stats
+        
+        // Element types
         Fire = 1 << 9,           // Fire-specific stats
         Cold = 1 << 10,          // Cold-specific stats
         Lightning = 1 << 11,     // Lightning-specific stats
         Chaos = 1 << 12,         // Chaos-specific stats
         Physical = 1 << 13,      // Physical damage stats
-
+        
         // Common combinations
-        RangedAttack = Core | Damage | Projectile | Combat,
-        MeleeAttack = Core | Damage | AreaEffect | AreaDamage | Combat | Melee | Physical,
+        RangedAttack = Core | Damage | Projectile | Elemental | Combat,
+        MeleeAttack = Core | Damage | AreaEffect | AreaDamage | Combat | Melee,
         DOTEffect = Core | Damage | Duration | Elemental | Combat,
-        Attack = Core | Damage | Combat,
-        ProjectileAttack = Core | Damage | Projectile | Combat | Duration,
-        FireSkill = Core | Damage | Fire | Elemental,
-        ColdSkill = Core | Damage | Cold | Elemental,
-        LightningSkill = Core | Damage | Lightning | Elemental,
+        Attack = Core | Damage | Elemental | Combat,
+        ProjectileAttack = Core | Damage | Projectile | Elemental | Combat | Duration
     }
 }

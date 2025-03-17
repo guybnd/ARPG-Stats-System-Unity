@@ -13,10 +13,11 @@ MonoBehaviour:
   m_Name: critical_strike_chance
   m_EditorClassIdentifier: 
   statId: critical_strike_chance
+  isTemporary: 0
   displayName: Critical Strike Chance
   description: Percentage chance to deal critical hits
   categories: 4
-  defaultValue: 5
+  defaultValue: 0
   isInteger: 0
   minValue: 0
   maxValue: 100

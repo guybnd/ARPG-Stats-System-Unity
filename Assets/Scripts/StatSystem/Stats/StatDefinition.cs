@@ -30,28 +30,39 @@ namespace PathSurvivors.Stats
     public enum StatCategory
     {
         None = 0,
+        
+        // UI and general organization categories
         Resource = 1 << 0,      // Life, mana, energy
         Attribute = 1 << 1,     // Strength, dexterity, intelligence
         Offense = 1 << 2,       // Damage, crit, attack speed
         Defense = 1 << 3,       // Armor, evasion, resistances
         Utility = 1 << 4,       // Movement speed, cooldown reduction
-        SkillCore = 1 << 5,     // Base skill attributes (cooldown, area)
-        Projectile = 1 << 6,    // Projectile-specific stats
-        AreaEffect = 1 << 7,    // Area effect specific stats
-        Melee = 1 << 8,         // Melee specific stats
+        
+        // Skill system categories 
+        Core = 1 << 5,          // Core skill attributes (cooldown, area)
+        Combat = 1 << 6,        // Combat-related stats (crit, attack speed)
+        Damage = 1 << 7,        // General damage stats
+        
+        // Delivery mechanism categories
+        Projectile = 1 << 8,    // Projectile-specific stats
+        AreaEffect = 1 << 9,    // Area effect specific stats
+        Melee = 1 << 10,        // Melee specific stats
+        Duration = 1 << 11,     // Duration-based effects
         
         // Element types
-        Physical = 1 << 10,
-        Fire = 1 << 11,
-        Cold = 1 << 12,
-        Lightning = 1 << 13,
-        Chaos = 1 << 14,
+        Physical = 1 << 15,
+        Fire = 1 << 16,
+        Cold = 1 << 17,
+        Lightning = 1 << 18,
+        Chaos = 1 << 19,
+        Elemental = 1 << 20,    // All elemental damage types
         
         // Common combinations
-        AllDamage = Offense | Physical | Fire | Cold | Lightning | Chaos,
+        AllDamage = Offense | Damage | Physical | Fire | Cold | Lightning | Chaos,
         AllDefense = Defense | Physical | Fire | Cold | Lightning | Chaos,
         AllAttributes = Attribute,
-        AllResources = Resource
+        AllResources = Resource,
+        SkillCore = Core | Combat | Damage | Elemental,
     }
     
     /// <summary>
@@ -64,8 +75,6 @@ namespace PathSurvivors.Stats
         [Tooltip("Unique identifier for this stat")]
         public string statId;
         public bool isTemporary = false; // Temporary stats are not saved in the save system - NOT IMPLEMENTED
-
-        public StatCategory statCategory = StatCategory.None; // Category for this stat (e.g., Offense, Defense, etc.)
         
         [Tooltip("Human-readable name for display")]
         public string displayName;
@@ -75,8 +84,8 @@ namespace PathSurvivors.Stats
         public string description;
         
         [Header("Categorization")]
-        [Tooltip("Categories this stat belongs to for filtering")]
-        public StatCategory categories;
+        [Tooltip("Categories this stat belongs to for filtering and stat interactions")]
+        public StatCategory categories = StatCategory.None;
         
         [Header("Value Settings")]
         [Tooltip("Default value when no modifiers are applied")]

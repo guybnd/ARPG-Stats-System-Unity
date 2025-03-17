@@ -46,62 +46,54 @@ namespace PathSurvivors.Stats
         /// <param name="statId">Unique ID for the stat</param>
         /// <param name="displayName">Human-readable name</param>
         /// <param name="defaultValue">Default value of the stat</param>
-        public void RegisterStat(string statId, string displayName, float defaultValue)
+        public void RegisterStat(string statId, string displayName, float defaultValue, StatCategory categories = StatCategory.None)
         {
-            RegisterStat(statId, displayName, defaultValue, float.MinValue, float.MaxValue, StatCategory.None);
+            RegisterStat(statId, displayName, defaultValue, float.MinValue, float.MaxValue, categories);
         }
         
         /// <summary>
         /// Registers a new stat with the registry including min/max bounds
         /// </summary>
-        /// <param name="statId">Unique ID for the stat</param>
-        /// <param name="displayName">Human-readable name</param>
-        /// <param name="defaultValue">Default value of the stat</param>
-        /// <param name="minValue">Minimum allowed value</param>
-        /// <param name="maxValue">Maximum allowed value</param>
-        public void RegisterStat(string statId, string displayName, float defaultValue, float minValue, float maxValue)
-        {
-            RegisterStat(statId, displayName, defaultValue, minValue, maxValue, StatCategory.None);
-        }
-        
-        /// <summary>
-        /// Registers a new stat with the registry including min/max bounds and category
-        /// </summary>
-        /// <param name="statId">Unique ID for the stat</param>
-        /// <param name="displayName">Human-readable name</param>
-        /// <param name="defaultValue">Default value of the stat</param>
-        /// <param name="minValue">Minimum allowed value</param>
-        /// <param name="maxValue">Maximum allowed value</param>
-        /// <param name="category">Category of the stat</param>
-        public void RegisterStat(string statId, string displayName, float defaultValue, float minValue, float maxValue, StatCategory category)
+        public void RegisterStat(string statId, string displayName, float defaultValue, float minValue, float maxValue, StatCategory categories = StatCategory.None)
         {
             if (string.IsNullOrEmpty(statId))
                 return;
                 
+            // Validate that the stat has at least one category assigned
+            if (categories == StatCategory.None)
+            {
+                Debug.LogWarning($"Stat {statId} is being registered without any category. Stats should have at least one category assigned.");
+            }
+
             // Check if this stat already exists
             if (statDefinitionLookup.ContainsKey(statId))
             {
-                Debug.LogWarning($"Stat {statId} is already registered. Updating definition instead.");
-                
+                // Update existing definition
                 var existingDef = statDefinitionLookup[statId];
                 existingDef.displayName = displayName;
                 existingDef.defaultValue = defaultValue;
                 existingDef.minValue = minValue;
                 existingDef.maxValue = maxValue;
-                existingDef.statCategory = category;
+                existingDef.categories = categories;
+                
+                #if UNITY_EDITOR
+                if (Application.isEditor && !Application.isPlaying)
+                {
+                    UnityEditor.EditorUtility.SetDirty(this);
+                    UnityEditor.EditorUtility.SetDirty(existingDef);
+                }
+                #endif
                 return;
             }
             
             // Create new definition
-            var definition = new StatDefinition
-            {
-                statId = statId,
-                displayName = displayName,
-                defaultValue = defaultValue,
-                minValue = minValue,
-                maxValue = maxValue,
-                statCategory = category
-            };
+            var definition = ScriptableObject.CreateInstance<StatDefinition>();
+            definition.statId = statId;
+            definition.displayName = displayName;
+            definition.defaultValue = defaultValue;
+            definition.minValue = minValue;
+            definition.maxValue = maxValue;
+            definition.categories = categories;
             
             // Add to collections
             statDefinitions.Add(definition);
@@ -119,8 +111,6 @@ namespace PathSurvivors.Stats
         /// <summary>
         /// Registers an alias for a stat ID
         /// </summary>
-        /// <param name="aliasId">The alias to use</param>
-        /// <param name="targetStatId">The actual stat ID</param>
         public void RegisterStatAlias(string aliasId, string targetStatId)
         {
             if (string.IsNullOrEmpty(aliasId) || string.IsNullOrEmpty(targetStatId))
@@ -157,12 +147,8 @@ namespace PathSurvivors.Stats
             string normalizedId = NormalizeStatId(statId);
             
             // Look up definition
-            if (statDefinitionLookup.TryGetValue(normalizedId, out var definition))
-            {
-                return definition;
-            }
-            
-            return null;
+            statDefinitionLookup.TryGetValue(normalizedId, out var definition);
+            return definition;
         }
         
         /// <summary>
@@ -170,13 +156,16 @@ namespace PathSurvivors.Stats
         /// </summary>
         public StatDefinition CreateTemporaryDefinition(string statId)
         {
-            return new StatDefinition
-            {
-                statId = statId,
-                displayName = statId, // Use ID as display name
-                defaultValue = 0f,
-                isTemporary = true
-            };
+            var temp = ScriptableObject.CreateInstance<StatDefinition>();
+            temp.statId = statId;
+            temp.displayName = statId; // Use ID as display name
+            temp.defaultValue = 0f;
+            temp.isTemporary = true;
+            temp.categories = StatCategory.None;
+            
+            Debug.LogWarning($"Creating temporary definition for unregistered stat: {statId}. Consider registering this stat properly with appropriate categories.");
+            
+            return temp;
         }
         
         /// <summary>
@@ -188,13 +177,7 @@ namespace PathSurvivors.Stats
                 return statId;
                 
             // Resolve alias if one exists
-            if (statAliases.TryGetValue(statId, out string targetId))
-            {
-                return targetId;
-            }
-            
-            // Otherwise return the original ID
-            return statId;
+            return statAliases.TryGetValue(statId, out string targetId) ? targetId : statId;
         }
         
         /// <summary>
@@ -210,17 +193,79 @@ namespace PathSurvivors.Stats
         /// </summary>
         public List<StatDefinition> GetStatsByCategory(StatCategory category)
         {
-            List<StatDefinition> result = new List<StatDefinition>();
+            var result = new List<StatDefinition>();
             
             foreach (var definition in statDefinitions)
             {
-                if ((definition.statCategory & category) != 0)
+                if (definition != null && (definition.categories & category) != 0)
                 {
                     result.Add(definition);
                 }
             }
             
             return result;
+        }
+        
+        /// <summary>
+        /// Get the categories associated with a stat
+        /// </summary>
+        public StatCategory GetStatCategories(string statId)
+        {
+            if (string.IsNullOrEmpty(statId))
+                return StatCategory.None;
+            
+            var definition = GetStatDefinition(statId);
+            return definition?.categories ?? StatCategory.None;
+        }
+        
+        /// <summary>
+        /// Check if a stat can affect another stat based on category overlap
+        /// </summary>
+        public bool CanAffect(string sourceStatId, string targetStatId)
+        {
+            var sourceCategories = GetStatCategories(sourceStatId);
+            var targetCategories = GetStatCategories(targetStatId);
+            
+            return (sourceCategories & targetCategories) != StatCategory.None;
+        }
+        
+        /// <summary>
+        /// Get all stats that can affect a stat with specific categories
+        /// </summary>
+        public List<string> GetAffectingStats(StatCategory targetCategories)
+        {
+            var result = new List<string>();
+            
+            foreach (var statId in statDefinitionLookup.Keys)
+            {
+                var statCategories = GetStatCategories(statId);
+                if ((statCategories & targetCategories) != StatCategory.None)
+                {
+                    result.Add(statId);
+                }
+            }
+            
+            return result;
+        }
+        
+        /// <summary>
+        /// Check if a stat is registered in the registry
+        /// </summary>
+        public bool IsStatRegistered(string statId)
+        {
+            if (string.IsNullOrEmpty(statId))
+                return false;
+                
+            string normalizedId = NormalizeStatId(statId);
+            return statDefinitionLookup.ContainsKey(normalizedId);
+        }
+        
+        /// <summary>
+        /// Get all registered stat IDs
+        /// </summary>
+        public IEnumerable<string> GetAllStatIds()
+        {
+            return statDefinitionLookup.Keys;
         }
     }
 }

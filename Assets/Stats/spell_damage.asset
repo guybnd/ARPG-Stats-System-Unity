@@ -13,9 +13,10 @@ MonoBehaviour:
   m_Name: spell_damage
   m_EditorClassIdentifier: 
   statId: spell_damage
+  isTemporary: 0
   displayName: Spell Damage
   description: Percentage increase to spell damage
-  categories: 4
+  categories: 1048804
   defaultValue: 0
   isInteger: 0
   minValue: 0

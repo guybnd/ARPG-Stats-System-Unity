@@ -48,43 +48,63 @@ namespace PathSurvivors.Stats
         }
         
         /// <summary>
-        /// Gets a stat value, creating it if it doesn't exist
+        /// Gets a stat value, creating it if it doesn't exist and it's registered in the registry
         /// </summary>
         public StatValue GetOrCreateStat(string statId)
         {
+            if (string.IsNullOrEmpty(statId))
+                return null;
+                
             // Normalize ID and check for aliases
             string normalizedId = registry.NormalizeStatId(statId);
             
-            // Get from dictionary or create
-            if (!stats.TryGetValue(normalizedId, out var stat))
+            // If the stat already exists in our collection, return it
+            if (stats.TryGetValue(normalizedId, out var existingStat))
             {
-                // Get definition from registry
-                var definition = registry.GetStatDefinition(normalizedId);
-                if (definition == null)
-                {
-                    if (debugStats)
-                    {
-                        Debug.LogWarning($"[{ownerName}] No definition found for stat '{statId}', using default");
-                    }
-                    
-                    // Create a default definition for unknown stats
-                    definition = registry.CreateTemporaryDefinition(normalizedId);
-                }
-                
-                // Create stat value with definition
-                stat = new StatValue(definition, definition.defaultValue);
-                stats[normalizedId] = stat;
-                
-                // Hook up event handler
-                stat.OnValueChanged += OnStatValueChanged;
-                
+                return existingStat;
+            }
+            
+            // Check if this stat is registered in the registry
+            StatDefinition definition = registry.GetStatDefinition(normalizedId);
+            
+            // If no definition, check if we should create a temporary one or reject it
+            if (definition == null)
+            {
                 if (debugStats)
                 {
-                    Debug.Log($"[{ownerName}] Created stat {normalizedId} with default value {definition.defaultValue}");
+                    Debug.LogWarning($"[{ownerName}] Stat '{statId}' is not registered in the StatRegistry. Stats must be registered before use.");
+                }
+                
+                // Optionally create a temporary definition with StatCategory.None
+                // This allows for backward compatibility but marks the stat as unclassified
+                definition = registry.CreateTemporaryDefinition(normalizedId);
+                
+                // For strictest enforcement, you could return null here instead
+                // return null;
+            }
+            
+            // Verify that the stat has at least one category
+            if (definition.categories == StatCategory.None)
+            {
+                if (debugStats)
+                {
+                    Debug.LogWarning($"[{ownerName}] Stat '{statId}' has no categories assigned. Stats should belong to at least one category.");
                 }
             }
             
-            return stat;
+            // Create the stat value
+            var statValue = new StatValue(definition, definition.defaultValue);
+            stats[normalizedId] = statValue;
+            
+            // Hook up event handler
+            statValue.OnValueChanged += OnStatValueChanged;
+            
+            if (debugStats)
+            {
+                Debug.Log($"[{ownerName}] Created stat {normalizedId} with default value {definition.defaultValue}");
+            }
+            
+            return statValue;
         }
         
         /// <summary>
@@ -92,8 +112,26 @@ namespace PathSurvivors.Stats
         /// </summary>
         public bool HasStat(string statId)
         {
+            if (string.IsNullOrEmpty(statId))
+                return false;
+                
             string normalizedId = registry.NormalizeStatId(statId);
             return stats.ContainsKey(normalizedId);
+        }
+        
+        /// <summary>
+        /// Checks if a stat is valid according to the registry
+        /// </summary>
+        public bool IsStatValid(string statId)
+        {
+            if (string.IsNullOrEmpty(statId))
+                return false;
+                
+            string normalizedId = registry.NormalizeStatId(statId);
+            StatDefinition definition = registry.GetStatDefinition(normalizedId);
+            
+            // A stat is valid if it has a definition in the registry AND has at least one category
+            return definition != null && definition.categories != StatCategory.None;
         }
         
         /// <summary>
@@ -101,11 +139,22 @@ namespace PathSurvivors.Stats
         /// </summary>
         public float GetStatValue(string statId, float defaultValue = 0)
         {
+            if (string.IsNullOrEmpty(statId))
+                return defaultValue;
+                
             string normalizedId = registry.NormalizeStatId(statId);
             
             if (stats.TryGetValue(normalizedId, out var stat))
             {
                 return stat.Value;
+            }
+            
+            // If the stat isn't in our collection but is valid in the registry,
+            // we'll create it on demand
+            if (registry.IsStatRegistered(normalizedId))
+            {
+                var newStat = GetOrCreateStat(normalizedId);
+                return newStat.Value;
             }
             
             return defaultValue;
@@ -120,30 +169,62 @@ namespace PathSurvivors.Stats
         }
         
         /// <summary>
-        /// Sets the base value of a stat
+        /// Sets the base value of a stat if it's registered in the registry
         /// </summary>
         public void SetBaseValue(string statId, float value)
         {
-            var stat = GetOrCreateStat(statId);
-            stat.BaseValue = value;
+            if (string.IsNullOrEmpty(statId))
+                return;
+                
+            string normalizedId = registry.NormalizeStatId(statId);
             
-            if (debugStats)
+            // Only set base value if the stat is valid according to the registry
+            if (!registry.IsStatRegistered(normalizedId))
             {
-                Debug.Log($"[{ownerName}] Set base value for {statId} to {value}, new total: {stat.Value}");
+                if (debugStats)
+                {
+                    Debug.LogWarning($"[{ownerName}] Cannot set base value for '{statId}': Stat is not registered in the StatRegistry.");
+                }
+                return;
+            }
+            
+            var stat = GetOrCreateStat(normalizedId);
+            if (stat != null)
+            {
+                stat.BaseValue = value;
+                
+                if (debugStats)
+                {
+                    Debug.Log($"[{ownerName}] Set base value for {statId} to {value}, new total: {stat.Value}");
+                }
             }
         }
         
         /// <summary>
-        /// Adds a modifier to a stat
+        /// Adds a modifier to a stat if the stat is valid according to the registry
         /// </summary>
         public void AddModifier(StatModifier modifier)
         {
             if (modifier == null || string.IsNullOrEmpty(modifier.statId))
                 return;
                 
-            // Ensure the stat exists
-            var stat = GetOrCreateStat(modifier.statId);
+            string normalizedId = registry.NormalizeStatId(modifier.statId);
             
+            // Check if the stat is registered in the registry
+            if (!registry.IsStatRegistered(normalizedId))
+            {
+                if (debugStats)
+                {
+                    Debug.LogWarning($"[{ownerName}] Cannot add modifier to '{modifier.statId}': Stat is not registered in the StatRegistry.");
+                }
+                return;
+            }
+            
+            // Ensure the stat exists
+            var stat = GetOrCreateStat(normalizedId);
+            if (stat == null)
+                return;
+                
             // Generate a unique ID if needed
             if (string.IsNullOrEmpty(modifier.modifierId))
             {
@@ -173,7 +254,7 @@ namespace PathSurvivors.Stats
         }
         
         /// <summary>
-        /// Adds a collection of modifiers
+        /// Adds a collection of modifiers for valid stats
         /// </summary>
         public void AddModifiers(IEnumerable<StatModifier> modifiers)
         {

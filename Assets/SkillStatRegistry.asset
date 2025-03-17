@@ -29,7 +29,7 @@ MonoBehaviour:
     - statId: physical_damage_max
       group: 8194
     - statId: fire_damage
-      group: 512
+      group: 544
     - statId: cold_damage
       group: 1056
     - statId: lightning_damage
@@ -41,9 +41,11 @@ MonoBehaviour:
     - statId: attack_speed
       group: 65
     - statId: critical_strike_chance
-      group: 64
+      group: 66
     - statId: critical_strike_multiplier
       group: 64
+    - statId: projectile_count
+      group: 68
   _skillStatMappings:
     mappings:
     - statId: base_damage_min
@@ -65,7 +67,7 @@ MonoBehaviour:
     - statId: cast_time
       group: 1
     - statId: critical_strike_chance
-      group: 64
+      group: 66
     - statId: projectile_count
       group: 4
     - statId: projectile_speed
@@ -76,4 +78,7 @@ MonoBehaviour:
       group: 16
     - statId: spell_damage
       group: 16
+    - statId: fire_damage
+      group: 512
   showDebugLogs: 1
+  statRegistry: {fileID: 11400000, guid: aa79a507360d5564ca016d149f0abccd, type: 2}

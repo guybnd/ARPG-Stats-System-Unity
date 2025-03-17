@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using PathSurvivors.Stats.Skills;
 
 namespace PathSurvivors.Stats
 {
@@ -28,10 +27,7 @@ namespace PathSurvivors.Stats
         [Header("Skill Configuration")]
         [SerializeField]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Used for future feature")]
-        private SkillStatGroup skillType = SkillStatGroup.ProjectileAttack | SkillStatGroup.Fire;
-        
-        [Header("Skill Registry")]
-        [SerializeField] private SkillStatRegistry skillStatRegistry;
+        private StatCategory skillType = StatCategory.Fire | StatCategory.Projectile;
         
         // Stats collections
         private StatCollection characterStats;
@@ -86,24 +82,6 @@ namespace PathSurvivors.Stats
             
             // Initial UI update
             UpdateAllUI();
-            
-            // Make sure we have a SkillStatRegistry
-            if (skillStatRegistry == null)
-            {
-                skillStatRegistry = FindFirstObjectByType<SkillStatRegistry>();
-                if (skillStatRegistry == null)
-                {
-                    GameObject registryObj = new GameObject("SkillStatRegistry");
-                    skillStatRegistry = ScriptableObject.CreateInstance<SkillStatRegistry>();
-                    Debug.Log("Created SkillStatRegistry GameObject");
-                }
-            }
-            
-            // Check if we have a SkillStatRegistry reference
-            if (skillStatRegistry == null)
-            {
-                Debug.LogError("SkillStatRegistry reference is missing! Please assign a SkillStatRegistry asset in the inspector.");
-            }
         }
         
         private void OnDestroy()
@@ -140,10 +118,17 @@ namespace PathSurvivors.Stats
             characterStats.SetBaseValue("spell_damage", 0);
             characterStats.SetBaseValue("fire_damage", 0);
             
+            // Critical Strike Stats
+            // Base critical strike chance for all attacks and skills
+            characterStats.SetBaseValue("critical_strike_chance", 10.0f);
+            // Increased critical strike chance that applies globally (to both attacks and skills)
+            characterStats.SetBaseValue("increased_critical_strike_chance", 0.0f);
+            // Increased critical strike chance that only applies to skills
+            characterStats.SetBaseValue("increased_skill_critical_strike_chance", 0.0f);
+            
             // Other stats
             characterStats.SetBaseValue("attack_speed", 1.0f);
             characterStats.SetBaseValue("cast_speed", 1.0f);
-            characterStats.SetBaseValue("critical_strike_chance", 5.0f);
             characterStats.SetBaseValue("damage_multiplier", 100.0f); // 100% = base damage
         }
         
@@ -159,7 +144,11 @@ namespace PathSurvivors.Stats
             skillStats.SetBaseValue("mana_cost", 15);
             skillStats.SetBaseValue("cooldown", 3.0f);
             skillStats.SetBaseValue("cast_time", 0.8f);
+            
+            // Base critical strike chance specific to this skill
             skillStats.SetBaseValue("critical_strike_chance", 5.0f);
+            // Increased critical strike chance specific to this skill instance
+            skillStats.SetBaseValue("increased_critical_strike_chance", 0.0f);
             
             // Apply skill type specific stats
             ApplySkillTypeSpecificStats();
@@ -176,37 +165,37 @@ namespace PathSurvivors.Stats
             skillStats.SetBaseValue("lightning_conversion", 0);
             
             // Handle elemental damage types
-            if ((skillType & SkillStatGroup.Fire) != 0)
+            if (skillType.ContainsAny(StatCategory.Fire))
             {
                 skillStats.SetBaseValue("fire_conversion", 100);
                 Debug.Log("Setting up Fire skill");
             }
-            else if ((skillType & SkillStatGroup.Cold) != 0)
+            else if (skillType.ContainsAny(StatCategory.Cold))
             {
                 skillStats.SetBaseValue("cold_conversion", 100);
                 Debug.Log("Setting up Cold skill");
             }
-            else if ((skillType & SkillStatGroup.Lightning) != 0)
+            else if (skillType.ContainsAny(StatCategory.Lightning))
             {
                 skillStats.SetBaseValue("lightning_conversion", 100);
                 Debug.Log("Setting up Lightning skill");
             }
             
             // Handle skill mechanic types
-            if ((skillType & SkillStatGroup.Projectile) != 0)
+            if (skillType.ContainsAny(StatCategory.Projectile))
             {
                 skillStats.SetBaseValue("projectile_count", 1);
                 skillStats.SetBaseValue("projectile_speed", 15);
                 Debug.Log("Setting up Projectile skill");
             }
             
-            if ((skillType & SkillStatGroup.AreaEffect) != 0)
+            if (skillType.ContainsAny(StatCategory.AreaEffect))
             {
                 skillStats.SetBaseValue("area_of_effect", 10);
                 Debug.Log("Setting up Area Effect skill");
             }
             
-            if ((skillType & SkillStatGroup.Duration) != 0)
+            if (skillType.ContainsAny(StatCategory.Duration))
             {
                 skillStats.SetBaseValue("duration", 5.0f);
                 Debug.Log("Setting up Duration skill");
@@ -237,44 +226,13 @@ namespace PathSurvivors.Stats
             // Base staff stats
             staff.implicitModifiers = new List<ItemStatModifier>
             {
-            //     new ItemStatModifier
-            //     {
-            //         statId = "physical_damage_min",
-            //         minValue = 2,
-            //         maxValue = 5,
-            //         value = 3,
-            //         applicationMode = StatApplicationMode.Additive,
-            //         modifierType = ItemModifierType.Implicit,
-            //         scope = ModifierScope.Global
-            //     },
-            //     new ItemStatModifier
-            //     {
-            //         statId = "physical_damage_max",
-            //         minValue = 4,
-            //         maxValue = 8,
-            //         value = 6,
-            //         applicationMode = StatApplicationMode.Additive,
-            //         modifierType = ItemModifierType.Implicit,
-            //         scope = ModifierScope.Global
-            //     }
+                // ...existing code...
             };
             
             // Staff special modifiers
             staff.explicitModifiers = new List<ItemStatModifier>
             {
-                // Intelligence boost
-                // new ItemStatModifier
-                // {
-                //     statId = "intelligence",
-                //     minValue = 10,
-                //     maxValue = 20,
-                //     value = 15,
-                //     applicationMode = StatApplicationMode.Additive,
-                //     modifierType = ItemModifierType.Prefix,
-                //     scope = ModifierScope.Global,
-                //     tier = 2
-                // },
-                // General fire damage boost
+                // Fire damage boost
                 new ItemStatModifier
                 {
                     statId = "fire_damage",
@@ -286,30 +244,19 @@ namespace PathSurvivors.Stats
                     scope = ModifierScope.Global,
                     tier = 2
                 },
-                // AOE fire damage boost (will only apply to AOE skills with fire damage)
-                // new ItemStatModifier
-                // {
-                //     statId = "aoe_fire_damage",
-                //     minValue = 10,
-                //     maxValue = 25,
-                //     value = 200,
-                //     applicationMode = StatApplicationMode.Additive,
-                //     modifierType = ItemModifierType.Prefix,
-                //     scope = ModifierScope.Global,
-                //     tier = 1
-                // },
-                // Spell damage boost
-                // new ItemStatModifier
-                // {
-                //     statId = "spell_damage",
-                //     minValue = 10,
-                //     maxValue = 150,
-                //     value = 100,
-                //     applicationMode = StatApplicationMode.Additive,
-                //     modifierType = ItemModifierType.Suffix,
-                //     scope = ModifierScope.Global,
-                //     tier = 1
-                // }
+                // added projectile, should only apply to projectile skills
+                new ItemStatModifier
+                {
+                    statId = "projectile_count",
+                    minValue = 1,
+                    maxValue = 2,
+                    value = 2,
+                    applicationMode = StatApplicationMode.Additive,
+                    modifierType = ItemModifierType.Prefix,
+                    scope = ModifierScope.Global,
+                    tier = 1
+                },
+                // ...existing code...
             };
             
             staff.Initialize();
@@ -426,20 +373,20 @@ namespace PathSurvivors.Stats
         {
             // Determine element
             string element = "Basic";
-            if ((skillType & SkillStatGroup.Fire) != 0) element = "Fire";
-            else if ((skillType & SkillStatGroup.Cold) != 0) element = "Cold";
-            else if ((skillType & SkillStatGroup.Lightning) != 0) element = "Lightning";
+            if (skillType.ContainsAny(StatCategory.Fire)) element = "Fire";
+            else if (skillType.ContainsAny(StatCategory.Cold)) element = "Cold";
+            else if (skillType.ContainsAny(StatCategory.Lightning)) element = "Lightning";
             
             // Determine mechanic
             string mechanic = "Strike";
-            if ((skillType & SkillStatGroup.Projectile) != 0) mechanic = "Bolt";
-            else if ((skillType & SkillStatGroup.AreaEffect) != 0) mechanic = "Nova";
+            if (skillType.ContainsAny(StatCategory.Projectile)) mechanic = "Bolt";
+            else if (skillType.ContainsAny(StatCategory.AreaEffect)) mechanic = "Nova";
             
             return $"{element} {mechanic}";
         }
         
         /// <summary>
-        /// Updates skill stats based on current character stats using the skill stat group system
+        /// Updates skill stats based on current character stats using the supported categories
         /// </summary>
         private void UpdateSkillStats()
         {
@@ -452,31 +399,32 @@ namespace PathSurvivors.Stats
                 Debug.Log($"[{this.skillStats.OwnerName}] Base damage before applying modifiers: {this.skillStats.GetStatValue("base_damage_min")}-{this.skillStats.GetStatValue("base_damage_max")}");
             }
             
-            // Check if we have a skill registry
-            if (skillStatRegistry == null)
-            {
-                Debug.LogError("Cannot update skill stats: SkillStatRegistry not assigned!");
-                return;
-            }
-            
-            // Get all character stats that affect this skill type
-            List<string> affectingStats = skillStatRegistry.GetAffectingStats(skillType);
+            // Get all stats from character
+            var characterStatValues = characterStats.GetAllStats();
             
             // Debug log which stats will be used
             if (characterStats.DebugStats)
             {
-                Debug.Log($"[{skillStats.OwnerName}] Skill of type {skillType} is affected by: {string.Join(", ", affectingStats)}");
+                Debug.Log($"[{skillStats.OwnerName}] Skill of type {skillType} is looking for stats that match its categories");
             }
             
-            // Only use character stats that are in the affecting stats list
-            foreach (string characterStatId in affectingStats)
+            // Apply character stats to skill based on skill categories
+            foreach (var stat in characterStatValues.Values)
             {
-                float characterStatValue = characterStats.GetStatValue(characterStatId);
+                string characterStatId = stat.StatId;
+                float characterStatValue = stat.Value;
                 
                 // Skip stats with zero value
                 if (Mathf.Approximately(characterStatValue, 0f))
                     continue;
-                    
+                
+                // Get stat categories if available
+                StatCategory statCategories = StatCategory.None;
+                if (stat.Definition != null)
+                {
+                    statCategories = stat.Definition.categories;
+                }
+                
                 // Special handling for different stat types
                 switch (characterStatId)
                 {
@@ -492,13 +440,16 @@ namespace PathSurvivors.Stats
                         break;
                         
                     case "spell_damage":
-                        // Apply spell damage bonus
-                        ApplyDamageMultiplier(1 + (characterStatValue / 100f), "Spell Damage");
+                        // Apply spell damage bonus only if this is a magical skill (use Core instead of Spell)
+                        if (skillType.ContainsAny(StatCategory.Core | StatCategory.Elemental))
+                        {
+                            ApplyDamageMultiplier(1 + (characterStatValue / 100f), "Spell Damage");
+                        }
                         break;
                         
                     case "fire_damage":
                         // For fire damage, only apply if skill has Fire type
-                        if ((skillType & SkillStatGroup.Fire) != 0)
+                        if (skillType.ContainsAny(StatCategory.Fire))
                         {
                             ApplyDamageMultiplier(1 + (characterStatValue / 100f), "Fire Damage");
                         }
@@ -506,7 +457,7 @@ namespace PathSurvivors.Stats
                         
                     case "cold_damage":
                         // For cold damage, only apply if skill has Cold type
-                        if ((skillType & SkillStatGroup.Cold) != 0)
+                        if (skillType.ContainsAny(StatCategory.Cold))
                         {
                             ApplyDamageMultiplier(1 + (characterStatValue / 100f), "Cold Damage");
                         }
@@ -514,7 +465,7 @@ namespace PathSurvivors.Stats
                         
                     case "lightning_damage":
                         // For lightning damage, only apply if skill has Lightning type
-                        if ((skillType & SkillStatGroup.Lightning) != 0)
+                        if (skillType.ContainsAny(StatCategory.Lightning))
                         {
                             ApplyDamageMultiplier(1 + (characterStatValue / 100f), "Lightning Damage");
                         }
@@ -532,24 +483,64 @@ namespace PathSurvivors.Stats
                             modifierId = "char_cast_speed",
                         });
                         break;
-                        
-                    case "critical_strike_chance":
-                        // Apply critical strike chance from character
-                        this.skillStats.AddModifier(new StatModifier
+                    
+                    case "increased_critical_strike_chance":
+                        // Global increased critical strike chance affects both character and skills
+                        skillStats.AddModifier(new StatModifier
                         {
-                            statId = "critical_strike_chance",
+                            statId = "increased_critical_strike_chance",
                             value = characterStatValue,
-                            applicationMode = StatApplicationMode.Additive,
-                            source = "Character Crit",
-                            modifierId = "char_crit",
+                            applicationMode = StatApplicationMode.PercentageAdditive,
+                            source = "Global Increased Crit",
+                            modifierId = "char_increased_crit_global",
                         });
                         break;
                         
-                    default:
-                        // For other stats, just log that we're applying them
-                        if (characterStats.DebugStats)
+                    case "increased_skill_critical_strike_chance":
+                        // Skill-specific increased critical strike chance only affects skills
+                        skillStats.AddModifier(new StatModifier
                         {
-                            Debug.Log($"[{skillStats.OwnerName}] Applying {characterStatId}: {characterStatValue}");
+                            statId = "increased_critical_strike_chance",
+                            value = characterStatValue,
+                            applicationMode = StatApplicationMode.PercentageAdditive,
+                            source = "Skill Increased Crit",
+                            modifierId = "char_increased_crit_skill",
+                        });
+                        break;
+
+                    default:
+                        // For other stats, check if the skill has this stat and apply it
+                        if (skillStats.HasStat(characterStatId))
+                        {
+                            // Check if the stat's categories match our skill's type
+                            bool categoryMatch = statCategories == StatCategory.None || 
+                                               skillType.ContainsAny(statCategories);
+                            
+                            if (categoryMatch)
+                            {
+                                // Add the character's stat value to the skill
+                                skillStats.AddModifier(new StatModifier
+                                {
+                                    statId = characterStatId,
+                                    value = characterStatValue,
+                                    applicationMode = StatApplicationMode.Additive,
+                                    source = $"Character {characterStatId}",
+                                    modifierId = $"char_{characterStatId}",
+                                });
+                                
+                                if (characterStats.DebugStats)
+                                {
+                                    Debug.Log($"[{skillStats.OwnerName}] Applied {characterStatId}: +{characterStatValue}");
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // Just log that we found this stat but didn't apply it
+                            if (characterStats.DebugStats)
+                            {
+                                Debug.Log($"[{skillStats.OwnerName}] Stat {characterStatId} found but not applicable to this skill");
+                            }
                         }
                         break;
                 }
@@ -571,46 +562,32 @@ namespace PathSurvivors.Stats
         /// </summary>
         private void RemoveCharacterBasedModifiersFromSkill()
         {
-            // Get a list of all modifier IDs we know are from character stats
-            List<string> characterModifierIds = new List<string>
-            {
-                "char_intelligence_scaling_min",
-                "char_intelligence_scaling_max",
-                "char_damage_multiplier_min",
-                "char_damage_multiplier_max",
-                "char_spell_damage_min",
-                "char_spell_damage_max",
-                "char_fire_damage_min",
-                "char_fire_damage_max",
-                "char_cast_speed",
-                "char_crit",
-                "char_damage_effectiveness_min",
-                "char_damage_effectiveness_max"
-            };
-            
-            // Remove each modifier by ID
-            foreach (string modifierId in characterModifierIds)
-            {
-                skillStats.RemoveModifier(modifierId);
-            }
-            
-            // Also remove any modifiers with "Character" in the source as a backup
+            // Get all stats in the collection
             var stats = skillStats.GetAllStats();
+            
+            // Process each stat
             foreach (var stat in stats.Values)
             {
                 List<StatModifier> modifiersToRemove = new List<StatModifier>();
                 
+                // Find all modifiers that came from character stats
                 foreach (var modifier in stat.GetAllActiveModifiers())
                 {
-                    if (modifier.source != null && modifier.source.Contains("Character"))
+                    // Check for modifiers with "char_" prefix in their ID
+                    if (modifier.modifierId != null && modifier.modifierId.StartsWith("char_"))
+                    {
+                        modifiersToRemove.Add(modifier);
+                    }
+                    // Check for modifiers with "Character" in their source as a backup
+                    else if (modifier.source != null && modifier.source.Contains("Character"))
                     {
                         modifiersToRemove.Add(modifier);
                     }
                 }
                 
+                // Remove all identified modifiers
                 foreach (var modifier in modifiersToRemove)
                 {
-                    // Use the modifierId instead of the modifier object
                     stat.RemoveModifier(modifier.modifierId);
                 }
             }
@@ -648,6 +625,35 @@ namespace PathSurvivors.Stats
         }
         
         /// <summary>
+        /// Calculates final critical strike chance for a skill taking into account:
+        /// 1. Skill's base critical strike chance (e.g. 5%)
+        /// 2. Character's base critical strike chance (e.g. 10%)
+        /// 3. Global increased critical strike chance (affects both attacks and skills)
+        /// 4. Skill-specific increased critical strike chance 
+        /// 5. Any temporary buffs or item modifiers
+        /// 
+        /// Example calculation:
+        /// - Skill base: 5%
+        /// - Character base: 10%
+        /// - Global increased: 50%
+        /// - Skill increased: 100%
+        /// 
+        /// Base crit = Skill base + Character base = 15%
+        /// Final crit = Base crit * (1 + Global increased + Skill increased)
+        /// Final crit = 15 * (1 + 0.5 + 1.0) = 37.5%
+        /// </summary>
+        private float CalculateCriticalStrikeChance()
+        {
+            float baseCrit = skillStats.GetStatValue("critical_strike_chance");
+            float increasedCrit = skillStats.GetStatValue("increased_critical_strike_chance") / 100f;
+            
+            // Apply increased crit multiplier
+            float finalCrit = baseCrit * (1f + increasedCrit);
+            
+            return finalCrit;
+        }
+
+        /// <summary>
         /// Calculates skill damage based on current stats
         /// </summary>
         private float CalculateSkillDamage(bool useMinDamage)
@@ -660,8 +666,8 @@ namespace PathSurvivors.Stats
                 skillStats.GetStatValue("base_damage_min") : 
                 skillStats.GetStatValue("base_damage_max");
                 
-            // Apply crit if we're lucky (simplified)
-            float critChance = skillStats.GetStatValue("critical_strike_chance") / 100f;
+            // Calculate and apply crit if we're lucky
+            float critChance = CalculateCriticalStrikeChance() / 100f;
             if (Random.value < critChance)
             {
                 damage *= 1.5f; // 50% more damage on crit
@@ -804,15 +810,15 @@ namespace PathSurvivors.Stats
             sb.AppendLine($"Damage Effectiveness: {skillStats.GetStatValue("damage_effectiveness"):F0}%");
             
             // Element-specific information
-            if ((skillType & SkillStatGroup.Fire) != 0)
+            if (skillType.ContainsAny(StatCategory.Fire))
             {
                 sb.AppendLine($"Fire Conversion: {skillStats.GetStatValue("fire_conversion"):F0}%");
             }
-            else if ((skillType & SkillStatGroup.Cold) != 0)
+            else if (skillType.ContainsAny(StatCategory.Cold))
             {
                 sb.AppendLine($"Cold Conversion: {skillStats.GetStatValue("cold_conversion"):F0}%");
             }
-            else if ((skillType & SkillStatGroup.Lightning) != 0)
+            else if (skillType.ContainsAny(StatCategory.Lightning))
             {
                 sb.AppendLine($"Lightning Conversion: {skillStats.GetStatValue("lightning_conversion"):F0}%");
             }
@@ -827,7 +833,7 @@ namespace PathSurvivors.Stats
             sb.AppendLine($"Critical Strike Chance: {skillStats.GetStatValue("critical_strike_chance"):F1}%");
             
             // Skill type-specific stats
-            if ((skillType & SkillStatGroup.Projectile) != 0)
+            if (skillType.ContainsAny(StatCategory.Projectile))
             {
                 sb.AppendLine();
                 sb.AppendLine("<b>Projectile Properties:</b>");
@@ -835,14 +841,14 @@ namespace PathSurvivors.Stats
                 sb.AppendLine($"Projectile Speed: {skillStats.GetStatValue("projectile_speed"):F0}");
             }
             
-            if ((skillType & SkillStatGroup.AreaEffect) != 0)
+            if (skillType.ContainsAny(StatCategory.AreaEffect))
             {
                 sb.AppendLine();
                 sb.AppendLine("<b>Area Properties:</b>");
                 sb.AppendLine($"Area of Effect: {skillStats.GetStatValue("area_of_effect"):F0}");
             }
             
-            if ((skillType & SkillStatGroup.Duration) != 0)
+            if (skillType.ContainsAny(StatCategory.Duration))
             {
                 sb.AppendLine();
                 sb.AppendLine("<b>Duration Properties:</b>");
