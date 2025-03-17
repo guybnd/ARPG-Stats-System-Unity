@@ -119,7 +119,7 @@ namespace PathSurvivors.Stats
             characterStats.SetBaseValue("fire_damage", 0);
             
             // Critical Strike Stats
-            // Base critical strike chance for all attacks and skills
+            // Base critical strike chance for character attacks (not skills)
             characterStats.SetBaseValue("critical_strike_chance", 10.0f);
             // Increased critical strike chance that applies globally (to both attacks and skills)
             characterStats.SetBaseValue("increased_critical_strike_chance", 0.0f);
@@ -145,10 +145,12 @@ namespace PathSurvivors.Stats
             skillStats.SetBaseValue("cooldown", 3.0f);
             skillStats.SetBaseValue("cast_time", 0.8f);
             
-            // Base critical strike chance specific to this skill
+            // Base critical strike chance specific to this skill (independent from character crit)
             skillStats.SetBaseValue("critical_strike_chance", 5.0f);
             // Increased critical strike chance specific to this skill instance
             skillStats.SetBaseValue("increased_critical_strike_chance", 0.0f);
+            // Increased critical strike chance with elemental damage (applies only to elemental skills)
+            skillStats.SetBaseValue("increased_critical_strike_with_elemental", 0.0f);
             
             // Apply skill type specific stats
             ApplySkillTypeSpecificStats();
@@ -251,6 +253,18 @@ namespace PathSurvivors.Stats
                     minValue = 1,
                     maxValue = 2,
                     value = 2,
+                    applicationMode = StatApplicationMode.Additive,
+                    modifierType = ItemModifierType.Prefix,
+                    scope = ModifierScope.Global,
+                    tier = 1
+                },
+
+                  new ItemStatModifier
+                {
+                    statId = "increased_critical_strike_with_elemental",
+                    minValue = 10,
+                    maxValue = 200,
+                    value = 100,
                     applicationMode = StatApplicationMode.Additive,
                     modifierType = ItemModifierType.Prefix,
                     scope = ModifierScope.Global,
@@ -500,7 +514,7 @@ namespace PathSurvivors.Stats
                         // Skill-specific increased critical strike chance only affects skills
                         skillStats.AddModifier(new StatModifier
                         {
-                            statId = "increased_critical_strike_chance",
+                            statId = "increased_critical_strike_with_skills",
                             value = characterStatValue,
                             applicationMode = StatApplicationMode.PercentageAdditive,
                             source = "Skill Increased Crit",
@@ -626,29 +640,28 @@ namespace PathSurvivors.Stats
         
         /// <summary>
         /// Calculates final critical strike chance for a skill taking into account:
-        /// 1. Skill's base critical strike chance (e.g. 5%)
-        /// 2. Character's base critical strike chance (e.g. 10%)
-        /// 3. Global increased critical strike chance (affects both attacks and skills)
-        /// 4. Skill-specific increased critical strike chance 
-        /// 5. Any temporary buffs or item modifiers
+        /// 1. Skill's base critical strike chance (e.g. 5%) - This is independent from character crit
+        /// 2. Global increased critical strike chance (affects both attacks and skills)
+        /// 3. Skill-specific increased critical strike chance
+        /// 4. Any temporary buffs or item modifiers
         /// 
         /// Example calculation:
         /// - Skill base: 5%
-        /// - Character base: 10%
         /// - Global increased: 50%
         /// - Skill increased: 100%
+        /// - Increased crit with skills: 25%
         /// 
-        /// Base crit = Skill base + Character base = 15%
-        /// Final crit = Base crit * (1 + Global increased + Skill increased)
-        /// Final crit = 15 * (1 + 0.5 + 1.0) = 37.5%
+        /// Final crit = Base crit * (1 + Global increased + Skill increased + Increased with skills)
+        /// Final crit = 5 * (1 + 0.5 + 1.0 + 0.25) = 13.75%
         /// </summary>
         private float CalculateCriticalStrikeChance()
         {
             float baseCrit = skillStats.GetStatValue("critical_strike_chance");
             float increasedCrit = skillStats.GetStatValue("increased_critical_strike_chance") / 100f;
+            float increasedCritWithSkills = skillStats.GetStatValue("increased_critical_strike_with_elemental") / 100f;
             
-            // Apply increased crit multiplier
-            float finalCrit = baseCrit * (1f + increasedCrit);
+            // Apply all crit multipliers
+            float finalCrit = baseCrit * (1f + increasedCrit + increasedCritWithSkills);
             
             return finalCrit;
         }

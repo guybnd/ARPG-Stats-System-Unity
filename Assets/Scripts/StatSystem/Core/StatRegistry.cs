@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 namespace PathSurvivors.Stats
 {
@@ -14,23 +15,28 @@ namespace PathSurvivors.Stats
         
         [SerializeField]
         private Dictionary<string, string> statAliases = new Dictionary<string, string>();
+
+        [SerializeField]
+        private List<ConditionalStatDefinition> conditionalStats = new List<ConditionalStatDefinition>();
         
         // Cache for faster lookups
         private Dictionary<string, StatDefinition> statDefinitionLookup = new Dictionary<string, StatDefinition>();
+        private Dictionary<string, List<ConditionalStatDefinition>> conditionalStatsLookup = new Dictionary<string, List<ConditionalStatDefinition>>();
         
-        // Automatically rebuild lookup when enabled (e.g., after domain reload)
         private void OnEnable()
         {
             RebuildLookup();
         }
         
         /// <summary>
-        /// Rebuilds the internal stat lookup dictionary
+        /// Rebuilds the internal stat lookup dictionaries
         /// </summary>
         public void RebuildLookup()
         {
             statDefinitionLookup.Clear();
+            conditionalStatsLookup.Clear();
             
+            // Build regular stat lookup
             foreach (var definition in statDefinitions)
             {
                 if (definition != null && !string.IsNullOrEmpty(definition.statId))
@@ -38,8 +44,21 @@ namespace PathSurvivors.Stats
                     statDefinitionLookup[definition.statId] = definition;
                 }
             }
+
+            // Build conditional stat lookup
+            foreach (var conditional in conditionalStats)
+            {
+                if (conditional != null && !string.IsNullOrEmpty(conditional.baseStatId))
+                {
+                    if (!conditionalStatsLookup.ContainsKey(conditional.baseStatId))
+                    {
+                        conditionalStatsLookup[conditional.baseStatId] = new List<ConditionalStatDefinition>();
+                    }
+                    conditionalStatsLookup[conditional.baseStatId].Add(conditional);
+                }
+            }
         }
-        
+
         /// <summary>
         /// Registers a new stat with the registry
         /// </summary>
@@ -266,6 +285,60 @@ namespace PathSurvivors.Stats
         public IEnumerable<string> GetAllStatIds()
         {
             return statDefinitionLookup.Keys;
+        }
+
+        /// <summary>
+        /// Registers a conditional stat modifier
+        /// </summary>
+        public void RegisterConditionalStat(string baseStatId, StatCategory conditions, string displaySuffix)
+        {
+            if (string.IsNullOrEmpty(baseStatId) || conditions == StatCategory.None)
+                return;
+
+            // Make sure the base stat exists
+            if (!IsStatRegistered(baseStatId))
+            {
+                Debug.LogError($"Cannot register conditional stat for {baseStatId}: Base stat is not registered");
+                return;
+            }
+
+            var conditional = new ConditionalStatDefinition(baseStatId, conditions, displaySuffix);
+            conditionalStats.Add(conditional);
+
+            // Update lookup
+            if (!conditionalStatsLookup.ContainsKey(baseStatId))
+            {
+                conditionalStatsLookup[baseStatId] = new List<ConditionalStatDefinition>();
+            }
+            conditionalStatsLookup[baseStatId].Add(conditional);
+
+            #if UNITY_EDITOR
+            if (Application.isEditor && !Application.isPlaying)
+            {
+                UnityEditor.EditorUtility.SetDirty(this);
+            }
+            #endif
+        }
+
+        /// <summary>
+        /// Gets all conditional stat definitions for a base stat
+        /// </summary>
+        public List<ConditionalStatDefinition> GetConditionalStats(string baseStatId)
+        {
+            if (conditionalStatsLookup.TryGetValue(baseStatId, out var conditionals))
+            {
+                return conditionals;
+            }
+            return new List<ConditionalStatDefinition>();
+        }
+
+        /// <summary>
+        /// Gets all conditional stats that apply given a set of categories
+        /// </summary>
+        public List<ConditionalStatDefinition> GetApplicableConditionalStats(string baseStatId, StatCategory categories)
+        {
+            var conditionals = GetConditionalStats(baseStatId);
+            return conditionals.Where(c => (c.conditions & categories) == c.conditions).ToList();
         }
     }
 }

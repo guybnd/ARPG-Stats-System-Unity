@@ -24,6 +24,34 @@ namespace PathSurvivors.Stats
     }
     
     /// <summary>
+    /// Represents a category-specific extension of a stat
+    /// </summary>
+    [Serializable]
+    public class StatExtension
+    {
+        [Tooltip("Categories that must be present for this extension to apply")]
+        public StatCategory requiredCategories;  
+        [Tooltip("Display text to append (e.g. 'with Fire Skills' or 'with Area Skills')")]
+        public string displaySuffix;
+
+        public StatExtension(StatCategory categories, string suffix)
+        {
+            this.requiredCategories = categories;
+            this.displaySuffix = suffix;
+        }
+
+        public string GetExtendedDisplayName(string baseName)
+        {
+            return $"{baseName} {displaySuffix}";
+        }
+
+        public string GetExtendedStatId(string baseStatId)
+        {
+            return $"{baseStatId}_{requiredCategories}";
+        }
+    }
+
+    /// <summary>
     /// Represents categories of stats for organization and filtering
     /// </summary>
     [Flags]
@@ -86,6 +114,10 @@ namespace PathSurvivors.Stats
         [Header("Categorization")]
         [Tooltip("Categories this stat belongs to for filtering and stat interactions")]
         public StatCategory categories = StatCategory.None;
+
+        [Header("Extensions")]
+        [Tooltip("Category-specific variants of this stat")]
+        public List<StatExtension> extensions = new List<StatExtension>();
         
         [Header("Value Settings")]
         [Tooltip("Default value when no modifiers are applied")]
@@ -154,6 +186,47 @@ namespace PathSurvivors.Stats
         public override string ToString()
         {
             return $"{displayName} ({statId})";
+        }
+
+        /// <summary>
+        /// Gets all extensions that apply given a set of categories
+        /// </summary>
+        public List<StatExtension> GetApplicableExtensions(StatCategory targetCategories)
+        {
+            return extensions.FindAll(e => (e.requiredCategories & targetCategories) == e.requiredCategories);
+        }
+
+        /// <summary>
+        /// Adds a new extension for specific categories
+        /// </summary>
+        public void AddExtension(StatCategory categories, string suffix, float defaultValue = 0)
+        {
+            if (categories == StatCategory.None)
+            {
+                Debug.LogWarning($"Cannot add extension to {statId} with no categories");
+                return;
+            }
+
+            // Check for duplicate category requirements
+            if (extensions.Exists(e => e.requiredCategories == categories))
+            {
+                Debug.LogWarning($"Extension for categories {categories} already exists on {statId}");
+                return;
+            }
+
+            extensions.Add(new StatExtension(categories, suffix));
+        }
+
+        /// <summary>
+        /// Gets display name including any applicable category suffixes
+        /// </summary>
+        public string GetDisplayName(StatCategory activeCategories)
+        {
+            var applicableExtensions = GetApplicableExtensions(activeCategories);
+            if (applicableExtensions.Count == 0)
+                return displayName;
+
+            return applicableExtensions[0].GetExtendedDisplayName(displayName);
         }
     }
 }

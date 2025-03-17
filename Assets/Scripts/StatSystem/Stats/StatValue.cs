@@ -11,69 +11,31 @@ namespace PathSurvivors.Stats
     [Serializable]
     public class StatValue
     {
-        // Reference to the stat definition
-        [SerializeField] private StatDefinition definition;
-        
-        // Base value before modifiers
-        [SerializeField] private float baseValue;
-        
-        // Final calculated value
-        private float cachedValue;
-        
-        // Whether the cached value is up-to-date
+        private float baseValue;
+        private List<StatModifier> modifiers = new List<StatModifier>();
+        private Dictionary<string, StatModifier> modifierLookup = new Dictionary<string, StatModifier>();
+        private StatDefinition definition;
         private bool isDirty = true;
-        
-        // Modifiers grouped by their application mode
-        private readonly Dictionary<StatApplicationMode, List<StatModifier>> modifiersByMode = 
-            new Dictionary<StatApplicationMode, List<StatModifier>>();
-            
-        // All modifiers by ID for lookup
-        private readonly Dictionary<string, StatModifier> modifiersById = 
-            new Dictionary<string, StatModifier>();
-            
-        // Modifiers grouped by source
-        private readonly Dictionary<string, List<StatModifier>> modifiersBySource = 
-            new Dictionary<string, List<StatModifier>>();
-            
-        // Events
+        private float cachedValue;
+        private StatCategory currentCategories = StatCategory.None;
+
         public event Action<StatValue> OnValueChanged;
-        
-        public StatValue(StatDefinition definition, float baseValue = 0)
-        {
-            this.definition = definition;
-            this.baseValue = baseValue;
-            
-            // Initialize dictionaries for all application modes
-            foreach (StatApplicationMode mode in Enum.GetValues(typeof(StatApplicationMode)))
-            {
-                modifiersByMode[mode] = new List<StatModifier>();
-            }
-        }
-        
-        /// <summary>
-        /// The definition of this stat
-        /// </summary>
+
+        public string StatId => definition?.statId;
         public StatDefinition Definition => definition;
-        
-        /// <summary>
-        /// The base value before modifiers
-        /// </summary>
-        public float BaseValue
+        public float BaseValue 
         {
             get => baseValue;
             set
             {
-                if (baseValue != value)
+                if (!Mathf.Approximately(baseValue, value))
                 {
                     baseValue = value;
                     MarkDirty();
                 }
             }
         }
-        
-        /// <summary>
-        /// Gets the final calculated value
-        /// </summary>
+
         public float Value
         {
             get
@@ -85,216 +47,163 @@ namespace PathSurvivors.Stats
                 return cachedValue;
             }
         }
-        
-        /// <summary>
-        /// Gets the final value as an integer
-        /// </summary>
-        public int IntValue => Mathf.RoundToInt(Value);
-        
-        /// <summary>
-        /// Gets the formatted value string
-        /// </summary>
-        public string FormattedValue => definition.FormatValue(Value);
-        
-        /// <summary>
-        /// The unique identifier for this stat
-        /// </summary>
-        public string StatId => definition?.statId ?? "unknown";
-        
-        /// <summary>
-        /// Adds a new modifier to this stat
-        /// </summary>
+
+        public StatValue(StatDefinition definition, float baseValue)
+        {
+            this.definition = definition;
+            this.baseValue = baseValue;
+            this.currentCategories = definition?.categories ?? StatCategory.None;
+        }
+
+        public void SetCategories(StatCategory categories)
+        {
+            if (currentCategories != categories)
+            {
+                currentCategories = categories;
+                MarkDirty();
+            }
+        }
+
         public void AddModifier(StatModifier modifier)
         {
-            if (modifier == null || string.IsNullOrEmpty(modifier.modifierId))
+            if (modifier == null)
                 return;
-                
-            // Store in lookup dictionaries
-            modifiersById[modifier.modifierId] = modifier;
-            
-            // Add to mode dictionary
-            if (!modifiersByMode.TryGetValue(modifier.applicationMode, out var list))
+
+            // If this modifier already exists, remove it first
+            if (!string.IsNullOrEmpty(modifier.modifierId) && modifierLookup.ContainsKey(modifier.modifierId))
             {
-                list = new List<StatModifier>();
-                modifiersByMode[modifier.applicationMode] = list;
+                RemoveModifier(modifier.modifierId);
             }
-            list.Add(modifier);
-            
-            // Add to source dictionary
-            string source = string.IsNullOrEmpty(modifier.source) ? "unknown" : modifier.source;
-            if (!modifiersBySource.TryGetValue(source, out var sourceList))
+
+            modifiers.Add(modifier);
+            if (!string.IsNullOrEmpty(modifier.modifierId))
             {
-                sourceList = new List<StatModifier>();
-                modifiersBySource[source] = sourceList;
+                modifierLookup[modifier.modifierId] = modifier;
             }
-            sourceList.Add(modifier);
-            
-            // Recalculate value
+
             MarkDirty();
         }
-        
-        /// <summary>
-        /// Removes a modifier by its ID
-        /// </summary>
+
         public bool RemoveModifier(string modifierId)
         {
-            if (!modifiersById.TryGetValue(modifierId, out var modifier))
+            if (string.IsNullOrEmpty(modifierId))
                 return false;
-                
-            // Remove from all collections
-            modifiersById.Remove(modifierId);
-            
-            // Remove from mode dictionary
-            if (modifiersByMode.TryGetValue(modifier.applicationMode, out var list))
+
+            if (modifierLookup.TryGetValue(modifierId, out var modifier))
             {
-                list.Remove(modifier);
+                modifiers.Remove(modifier);
+                modifierLookup.Remove(modifierId);
+                MarkDirty();
+                return true;
             }
-            
-            // Remove from source dictionary
-            if (modifiersBySource.TryGetValue(modifier.source ?? "unknown", out var sourceList))
+
+            return false;
+        }
+
+        public void ClearModifiers()
+        {
+            if (modifiers.Count > 0)
             {
-                sourceList.Remove(modifier);
-                
-                // Clean up empty lists
-                if (sourceList.Count == 0)
-                {
-                    modifiersBySource.Remove(modifier.source ?? "unknown");
-                }
+                modifiers.Clear();
+                modifierLookup.Clear();
+                MarkDirty();
             }
-            
-            // Recalculate value
-            MarkDirty();
-            return true;
+        }
+
+        public IReadOnlyList<StatModifier> GetAllActiveModifiers()
+        {
+            return modifiers;
+        }
+
+        /// <summary>
+        /// Gets modifiers from a specific source
+        /// </summary>
+        public IEnumerable<StatModifier> GetModifiersFromSource(string source)
+        {
+            if (string.IsNullOrEmpty(source))
+                return Enumerable.Empty<StatModifier>();
+                
+            return modifiers.Where(m => m.source == source);
         }
         
         /// <summary>
-        /// Removes all modifiers from a specific source
+        /// Gets a specific modifier by its ID
         /// </summary>
-        public int RemoveModifiersFromSource(string source)
+        public StatModifier GetModifier(string modifierId)
         {
-            if (string.IsNullOrEmpty(source) || !modifiersBySource.TryGetValue(source, out var modifiers))
-                return 0;
+            if (string.IsNullOrEmpty(modifierId))
+                return null;
                 
-            int count = modifiers.Count;
-            
-            // Get a copy of modifier IDs to avoid collection modification issues
-            string[] modifierIds = modifiers.Select(m => m.modifierId).ToArray();
-            
-            // Remove each modifier
-            foreach (string id in modifierIds)
-            {
-                RemoveModifier(id);
-            }
-            
-            return count;
-        }
-        
-        /// <summary>
-        /// Marks the cached value as needing recalculation
-        /// </summary>
-        private void MarkDirty()
-        {
-            isDirty = true;
-            OnValueChanged?.Invoke(this);
-        }
-        
-        /// <summary>
-        /// Recalculates the cached value based on modifiers
-        /// </summary>
-        private void RecalculateValue()
-        {
-            float result = baseValue;
-            bool hasOverride = false;
-            
-            // 1. Check for override modifiers first (highest priority wins)
-            var overrideModifiers = modifiersByMode[StatApplicationMode.Override]
-                .Where(m => m.isActive)
-                .OrderByDescending(m => m.priority);
-                
-            if (overrideModifiers.Any())
-            {
-                result = overrideModifiers.First().value;
-                hasOverride = true;
-            }
-            
-            // If we have an override, skip other calculations
-            if (!hasOverride)
-            {
-                // 2. Apply additive modifiers
-                var additiveModifiers = modifiersByMode[StatApplicationMode.Additive].Where(m => m.isActive);
-                foreach (var mod in additiveModifiers)
-                {
-                    result += mod.value;
-                }
-                
-                // 3. Apply percentage additive modifiers
-                float totalPercentAdditive = 0;
-                var percentModifiers = modifiersByMode[StatApplicationMode.PercentageAdditive].Where(m => m.isActive);
-                foreach (var mod in percentModifiers)
-                {
-                    totalPercentAdditive += mod.value;
-                }
-                
-                // Apply total percentage if any
-                if (totalPercentAdditive != 0)
-                {
-                    result *= (1 + totalPercentAdditive / 100f);
-                }
-                
-                // 4. Apply multiplicative modifiers (each is separate)
-                var multiplicativeModifiers = modifiersByMode[StatApplicationMode.Multiplicative].Where(m => m.isActive);
-                foreach (var mod in multiplicativeModifiers)
-                {
-                    result *= mod.value;
-                }
-            }
-            
-            // 5. Constrain to min/max values
-            cachedValue = definition != null ? definition.ConstrainValue(result) : result;
-            isDirty = false;
-        }
-        
-        /// <summary>
-        /// Gets all modifiers from a specific source
-        /// </summary>
-        public IReadOnlyList<StatModifier> GetModifiersFromSource(string source)
-        {
-            if (modifiersBySource.TryGetValue(source, out var modifiers))
-            {
-                return modifiers.AsReadOnly();
-            }
-            
-            return Array.Empty<StatModifier>();
+            modifierLookup.TryGetValue(modifierId, out var modifier);
+            return modifier;
         }
         
         /// <summary>
         /// Gets all modifiers of a specific application mode
         /// </summary>
-        public IReadOnlyList<StatModifier> GetModifiersByMode(StatApplicationMode mode)
+        public List<StatModifier> GetModifiersByMode(StatApplicationMode mode)
         {
-            if (modifiersByMode.TryGetValue(mode, out var modifiers))
+            return modifiers.Where(m => m.applicationMode == mode).ToList();
+        }
+
+        private void RecalculateValue()
+        {
+            float finalValue = baseValue;
+            float sumPercentageAdditive = 0;
+
+            // Process regular modifiers
+            foreach (var modifier in modifiers)
             {
-                return modifiers.AsReadOnly();
+                switch (modifier.applicationMode)
+                {
+                    case StatApplicationMode.Additive:
+                        finalValue += modifier.value;
+                        break;
+                    case StatApplicationMode.PercentageAdditive:
+                        sumPercentageAdditive += modifier.value;
+                        break;
+                    case StatApplicationMode.Override:
+                        finalValue = modifier.value;
+                        sumPercentageAdditive = 0; // Override ignores percentage bonuses
+                        break;
+                    case StatApplicationMode.Multiplicative:
+                        finalValue *= modifier.value;
+                        break;
+                }
             }
-            
-            return Array.Empty<StatModifier>();
+
+            // Apply percentage based increases
+            if (!Mathf.Approximately(sumPercentageAdditive, 0))
+            {
+                finalValue *= (1 + sumPercentageAdditive / 100f);
+            }
+
+            // Clamp the value if this stat has a definition with bounds
+            if (definition != null)
+            {
+                finalValue = definition.ConstrainValue(finalValue);
+            }
+
+            cachedValue = finalValue;
+            isDirty = false;
         }
-        
-        /// <summary>
-        /// Gets all active modifiers for this stat
-        /// </summary>
-        public IEnumerable<StatModifier> GetAllActiveModifiers()
+
+        private void MarkDirty()
         {
-            return modifiersById.Values.Where(m => m.isActive);
+            if (!isDirty)
+            {
+                isDirty = true;
+                OnValueChanged?.Invoke(this);
+            }
         }
-        
-        /// <summary>
-        /// Gets a modifier by its ID
-        /// </summary>
-        public StatModifier GetModifier(string modifierId)
+
+        public override string ToString()
         {
-            modifiersById.TryGetValue(modifierId, out var modifier);
-            return modifier;
+            if (definition != null)
+            {
+                return $"{definition.GetDisplayName(currentCategories)}: {definition.FormatValue(Value)}";
+            }
+            return $"{StatId}: {Value}";
         }
     }
 }
