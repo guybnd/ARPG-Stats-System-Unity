@@ -137,3 +137,57 @@ MonoBehaviour:
   - baseStatId: critical_strike_chance
     conditions: 1048576
     displaySuffix: with elemental
+  - baseStatId: critical_strike_chance
+    conditions: 65536
+    displaySuffix: with fire skills
+  - baseStatId: critical_strike_chance
+    conditions: 1048576
+    displaySuffix: with elemental
+  - baseStatId: critical_strike_chance
+    conditions: 65536
+    displaySuffix: with fire skills
+  - baseStatId: critical_strike_chance
+    conditions: 1048576
+    displaySuffix: with elemental
+  - baseStatId: critical_strike_chance
+    conditions: 65536
+    displaySuffix: with fire skills
+  - baseStatId: critical_strike_chance
+    conditions: 1048576
+    displaySuffix: with elemental
+  - baseStatId: critical_strike_chance
+    conditions: 65536
+    displaySuffix: with fire skills
+  - baseStatId: critical_strike_chance
+    conditions: 1048576
+    displaySuffix: with elemental
+  - baseStatId: critical_strike_chance
+    conditions: 65536
+    displaySuffix: with fire skills
+  - baseStatId: critical_strike_chance
+    conditions: 1048576
+    displaySuffix: with elemental
+  - baseStatId: critical_strike_chance
+    conditions: 65536
+    displaySuffix: with fire skills
+  - baseStatId: critical_strike_chance
+    conditions: 1048576
+    displaySuffix: with elemental
+  - baseStatId: critical_strike_chance
+    conditions: 65536
+    displaySuffix: with fire skills
+  - baseStatId: critical_strike_chance
+    conditions: 1048576
+    displaySuffix: with elemental
+  - baseStatId: critical_strike_chance
+    conditions: 65536
+    displaySuffix: with fire skills
+  - baseStatId: critical_strike_chance
+    conditions: 1048576
+    displaySuffix: with elemental
+  - baseStatId: critical_strike_chance
+    conditions: 65536
+    displaySuffix: with fire skills
+  - baseStatId: critical_strike_chance
+    conditions: 1048576
+    displaySuffix: with elemental

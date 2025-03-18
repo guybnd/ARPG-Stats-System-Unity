@@ -14,10 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   statId: attack_speed
   isTemporary: 0
-  statCategory: 0
   displayName: Attack Speed
   description: Attacks per second
-  categories: 4
+  categories: 64
+  extensions:
+  - requiredCategories: 0
+    displaySuffix: with Fire
   defaultValue: 0
   isInteger: 0
   minValue: 0.1
