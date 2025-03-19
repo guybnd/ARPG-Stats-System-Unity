@@ -1,141 +1,218 @@
-# Core Stats System
+# Core Stats Documentation
 
 ## Overview
 
-The Core Stats System provides fundamental stat handling functionality including stat values, modifiers, and collections.
+The Core Stats framework is the foundation of the ARPG Stats System. It provides tools to define, manage, and modify stats dynamically. This document explains the key components, APIs, and best practices for working with stats.
 
 ## Key Components
 
-### StatRegistry
+### 1. StatRegistry
 
-Central repository for stat definitions. It contains information about:
-- Stat IDs
-- Display names
-- Default values
-- Minimum/maximum constraints
-- Stat aliases
+The `StatRegistry` is the central repository for all stat definitions. It ensures consistency and provides default values for stats.
+
+#### Key Methods:
 
 ```csharp
-// Creating a stat registry
+// Register a new stat
+void RegisterStat(string statId, string displayName, float defaultValue, float minValue = 0f, float maxValue = float.MaxValue, StatCategory categories = StatCategory.None);
+
+// Check if a stat is registered
+bool IsStatRegistered(string statId);
+
+// Get a stat definition
+StatDefinition GetStatDefinition(string statId);
+```
+
+#### Examples:
+
+```csharp
+// Example 1: Registering a new stat
 StatRegistry registry = ScriptableObject.CreateInstance<StatRegistry>();
+registry.RegisterStat("health", "Health", 100f, 0f, 1000f, StatCategory.Defense);
+registry.RegisterStat("mana", "Mana", 50f, 0f, 500f, StatCategory.Resource);
 
-// Registering stats
-registry.RegisterStat("health", "Health", 100f);
-registry.RegisterStat("mana", "Mana", 50f);
-registry.RegisterStat("strength", "Strength", 10f);
+// Example 2: Checking if a stat is registered
+bool isHealthRegistered = registry.IsStatRegistered("health");
+Debug.Log($"Is Health Registered: {isHealthRegistered}");
+
+// Example 3: Retrieving a stat definition
+StatDefinition healthDef = registry.GetStatDefinition("health");
+Debug.Log($"Health Default Value: {healthDef.defaultValue}");
 ```
 
-### StatCollection
+### 2. StatCollection
 
-A collection of stats for a specific entity (character, monster, skill, etc.)
+The `StatCollection` is the core container for managing stat values and modifiers. It interacts with the `StatRegistry` to ensure all stats are valid.
+
+#### Key Methods:
 
 ```csharp
-// Creating a stat collection
-StatCollection playerStats = new StatCollection(registry, debugStats: true, ownerName: "Player");
+// Set a base value for a stat
+void SetBaseValue(string statId, float value);
 
-// Setting base values
-playerStats.SetBaseValue("strength", 15f);
-playerStats.SetBaseValue("dexterity", 12f);
+// Get the current value of a stat
+float GetStatValue(string statId);
 
-// Getting stat values
-float strength = playerStats.GetStatValue("strength");
+// Add a modifier to a stat
+void AddModifier(StatModifier modifier);
+
+// Remove a modifier by ID
+void RemoveModifier(string modifierId);
+
+// Get a debug report of all stats
+string CreateDebugReport();
 ```
 
-### StatModifier
-
-Modifies a stat value. Modifiers can be:
-- Additive: Add a value to the stat
-- Multiplicative: Multiply the stat by a value
-- Percentage Additive: Add a percentage to the stat
-- Override: Replace the stat value entirely
+#### Examples:
 
 ```csharp
-// Creating a modifier
-StatModifier strengthBuff = new StatModifier
-{
-    statId = "strength",
-    value = 5f,
+// Example 1: Setting and retrieving base values
+StatCollection stats = new StatCollection(registry);
+stats.SetBaseValue("health", 100f);
+stats.SetBaseValue("mana", 50f);
+float health = stats.GetStatValue("health");
+Debug.Log($"Health: {health}");
+
+// Example 2: Adding a modifier
+stats.AddModifier(new StatModifier {
+    statId = "health",
+    value = 20f,
     applicationMode = StatApplicationMode.Additive,
-    source = "Strength Potion",
-    duration = 30f, // 30 seconds duration
-};
+    source = "Health Potion"
+});
+Debug.Log($"Health after modifier: {stats.GetStatValue("health")}");
 
-// Applying a modifier
-playerStats.AddModifier(strengthBuff);
+// Example 3: Removing a modifier
+stats.RemoveModifier("health_potion_modifier");
+Debug.Log($"Health after removing modifier: {stats.GetStatValue("health")}");
 
-// Removing a modifier by ID
-playerStats.RemoveModifier(strengthBuff.modifierId);
-
-// Removing modifiers by source
-playerStats.RemoveModifiersFromSource("Strength Potion");
+// Example 4: Generating a debug report
+string report = stats.CreateDebugReport();
+Debug.Log(report);
 ```
 
-### TimedModifierManager
+### 3. StatModifier
 
-Handles automatic removal of temporary modifiers.
+The `StatModifier` represents a change to a stat. Modifiers can be additive, multiplicative, or percentage-based.
+
+#### Properties:
 
 ```csharp
-// TimedModifierManager is created automatically
-// You don't need to create it manually
-
-// Just make sure your scene doesn't get destroyed
-// if you're using temporary modifiers across scenes
+string statId; // The ID of the stat to modify
+float value; // The value of the modification
+StatApplicationMode applicationMode; // Additive, Multiplicative, or PercentageAdditive
+string source; // The source of the modifier (e.g., item, buff)
+string modifierId; // A unique ID for the modifier
 ```
 
-## Stat Calculation
-
-Stats are calculated in the following order:
-
-1. Base Value
-2. Additive Modifiers (flat bonuses)
-3. Percentage Additive Modifiers (increased/reduced)
-4. Multiplicative Modifiers (more/less)
-5. Override Modifiers (highest priority wins)
-
-Example:
-- Base strength: 10
-- +5 strength (additive)
-- +20% strength (percentage additive)
-- 1.5× strength (multiplicative)
-- = (10 + 5) × (1 + 0.2) × 1.5 = 27
-
-## Event Handling
-
-You can subscribe to stat change events:
+#### Examples:
 
 ```csharp
-// Subscribe to specific stat changes
-playerStats.OnStatChanged += (statId, newValue) => 
-{
-    Debug.Log($"{statId} changed to {newValue}");
-};
+// Example 1: Adding an additive modifier
+stats.AddModifier(new StatModifier {
+    statId = "mana",
+    value = 10f,
+    applicationMode = StatApplicationMode.Additive,
+    source = "Mana Potion",
+    modifierId = "mana_potion_modifier"
+});
 
-// Subscribe to any stat change in the collection
-playerStats.OnStatsChanged += (collection) => 
-{
-    Debug.Log("Stats changed in collection: " + collection.OwnerName);
-};
+// Example 2: Adding a percentage modifier
+stats.AddModifier(new StatModifier {
+    statId = "health",
+    value = 15f,
+    applicationMode = StatApplicationMode.PercentageAdditive,
+    source = "Health Boost",
+    modifierId = "health_boost_modifier"
+});
+
+// Example 3: Adding a multiplicative modifier
+stats.AddModifier(new StatModifier {
+    statId = "damage",
+    value = 1.5f,
+    applicationMode = StatApplicationMode.Multiplicative,
+    source = "Damage Buff",
+    modifierId = "damage_buff_modifier"
+});
 ```
 
-## Debug Features
+## Advanced Features
 
-Enable debug logging for detailed insights:
+### Temporary Modifiers
+
+Temporary modifiers are applied for a limited duration and automatically removed when they expire.
+
+#### Example:
 
 ```csharp
-// Enable when creating the collection
-StatCollection playerStats = new StatCollection(registry, debugStats: true, ownerName: "Player");
-
-// This will log:
-// - When stats are created
-// - When base values are set
-// - When modifiers are added/removed
-// - When modifiers expire
+// Apply a temporary modifier
+stats.AddTemporaryModifier("health", 50f, 10f, "Temporary Buff");
 ```
+
+### Categories
+
+Categories group stats into logical groups, such as Offense, Defense, or Utility. They allow for filtering and specialized behavior.
+
+#### Example:
+
+```csharp
+// Assign categories to a stat
+StatDefinition healthDef = registry.GetStatDefinition("health");
+healthDef.SetCategories(StatCategory.Defense);
+```
+
+## Debugging
+
+### Debugging Tools
+
+Enable debugging to log detailed information about stat changes.
+
+```csharp
+// Enable debug mode
+stats.DebugStats = true;
+
+// Generate a debug report
+Debug.Log(stats.CreateDebugReport());
+```
+
+### Common Debugging Scenarios
+
+1. **Stat Not Updating**:
+   - Ensure the stat is registered in the `StatRegistry`.
+   - Verify the `statId` matches the registered stat.
+
+2. **Modifier Not Applying**:
+   - Check the `applicationMode` of the modifier.
+   - Ensure the `modifierId` is unique.
 
 ## Best Practices
 
-1. **Consistent IDs**: Keep stat IDs consistent throughout your code
-2. **Source Tracking**: Always provide a source for modifiers to aid debugging
-3. **Unique IDs**: Give important modifiers unique IDs for targeted removal
-4. **Collections**: Create separate collections for different entities
-5. **Cleanup**: Call `Cleanup()` on collections when they're no longer needed
+1. **Use Consistent IDs**: Ensure all stat IDs are unique and descriptive.
+2. **Clean Up Modifiers**: Remove modifiers when they are no longer needed.
+3. **Leverage Categories**: Use categories to organize and filter stats.
+4. **Debug Early**: Use the debugging tools to identify issues during development.
+
+## API Reference
+
+### StatRegistry
+- `void RegisterStat(string statId, string displayName, float defaultValue, float minValue = 0f, float maxValue = float.MaxValue, StatCategory categories = StatCategory.None)`
+- `bool IsStatRegistered(string statId)`
+- `StatDefinition GetStatDefinition(string statId)`
+
+### StatCollection
+- `void SetBaseValue(string statId, float value)`
+- `float GetStatValue(string statId)`
+- `void AddModifier(StatModifier modifier)`
+- `void RemoveModifier(string modifierId)`
+- `string CreateDebugReport()`
+
+### StatModifier
+- `string statId`
+- `float value`
+- `StatApplicationMode applicationMode`
+- `string source`
+- `string modifierId`
+
+## Conclusion
+
+The Core Stats framework is a powerful tool for managing stats in your game. By following the best practices and leveraging the provided APIs, you can create a robust and flexible stats system.

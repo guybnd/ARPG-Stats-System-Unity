@@ -205,6 +205,59 @@ ItemInstance swordInstance = sword.CreateInstance();
 swordInstance.RollModifiers();
 ```
 
+## example of crteationg an item with unique modifier IDs
+    
+    
+```csharp
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+using PathSurvivors.Stats;
+
+public class ItemGenerator : MonoBehaviour
+{
+    [SerializeField] private StatRegistry statRegistry;
+
+    public Item GenerateRandomItem(string itemId, string itemName, int numberOfModifiers)
+    {
+        // Create a new item
+        Item newItem = ScriptableObject.CreateInstance<Item>();
+        newItem.displayName = itemName;
+
+        // Predefined list of available stats
+        List<string> availableStats = new List<string> { "health", "strength", "mana", "damage" };
+
+        // Randomly generate modifiers
+        for (int i = 0; i < numberOfModifiers; i++)
+        {
+            // Randomly select a stat
+            string randomStat = availableStats[UnityEngine.Random.Range(0, availableStats.Count)];
+
+            // Generate a random value for the modifier
+            float randomValue = UnityEngine.Random.Range(5f, 20f);
+
+            // Create a new modifier
+            ItemStatModifier modifier = new ItemStatModifier
+            {
+                statId = randomStat,
+                value = randomValue,
+                applicationMode = StatApplicationMode.Additive,
+                scope = ModifierScope.Global,
+                modifierId = ModifierIdGenerator.GenerateModifierId(itemId, randomStat) // Uses ModifierIdGenerator.GenerateModifierId to create a unique ID for each modifier based on the itemId and statId.
+            };
+
+            // Add the modifier to the item
+            newItem.explicitModifiers.Add(modifier);
+        }
+
+        return newItem;
+    }
+}
+    
+    ```
+
+
+
 ## Best Practices
 
 1. **Clear IDs**: Use consistent stat IDs between items and character stats

@@ -3,6 +3,17 @@ using UnityEngine;
 
 namespace PathSurvivors.Stats
 {
+    public static class ModifierIdGenerator
+    {
+        /// <summary>
+        /// Generates a unique modifier ID based on the source and stat ID.
+        /// </summary>
+        public static string GenerateModifierId(string sourceId, string statId)
+        {
+            return $"{sourceId}_{statId}_{Guid.NewGuid()}";
+        }
+    }
+
     /// <summary>
     /// Represents a single modification to a stat value
     /// </summary>
@@ -77,6 +88,21 @@ namespace PathSurvivors.Stats
             this.applicationMode = mode;
             this.source = source;
             this.modifierId = Guid.NewGuid().ToString();
+            this.duration = duration;
+            // Don't set creationTime in constructor as it causes serialization issues
+            // It will be initialized when actually used
+        }
+
+        /// <summary>
+        /// Creates a new stat modifier with automatic ID generation based on source and stat ID.
+        /// </summary>
+        public StatModifier(string sourceId, string statId, float value, StatApplicationMode mode = StatApplicationMode.Additive, string source = "", float duration = 0)
+        {
+            this.statId = statId;
+            this.value = value;
+            this.applicationMode = mode;
+            this.source = source;
+            this.modifierId = ModifierIdGenerator.GenerateModifierId(sourceId, statId);
             this.duration = duration;
             // Don't set creationTime in constructor as it causes serialization issues
             // It will be initialized when actually used

@@ -1,150 +1,146 @@
-# Integration Guide
+# Integration Guide for ARPG Stats System
 
-This guide explains how to integrate the PathSurvivors Stats System into your project. Follow these steps to set up and use the system effectively.
+## Overview
 
-## Prerequisites
+The ARPG Stats System is a modular framework designed for RPG-style games. It provides a flexible and powerful way to manage character stats, items, and modifiers. This guide will help you integrate the system into your project.
 
-1. Unity 2020.3 or later.
-2. Ensure the `StatRegistry` and `SkillStatRegistry` assets are created in your project.
-3. Familiarity with Unity's ScriptableObject and MonoBehaviour systems.
+## Features
 
-## Step 1: Setting Up the Stat Registry
+- **Flexible Stat System**: Define and manage stats with custom behaviors.
+- **Dynamic Modifier Application**: Additive, multiplicative, and percentage-based modifiers.
+- **Temporary Effects**: Time-based stat buffs and debuffs.
+- **Item-Stat Integration**: Equipment that affects character stats.
+- **Group-Based Stat Filtering**: Organize stats into logical categories.
 
-The `StatRegistry` is the central repository for all stat definitions.
+## Quick Start Guide
 
-1. Create a `StatRegistry` asset if it doesn't already exist:
-   - Right-click in the Project window.
-   - Select `Create > PathSurvivors > Stats > Stat Registry`.
-   - Name the asset `StatRegistry`.
+### 1. Setting Up the Stats Registry
 
-2. Populate the registry with stats:
-   - Open the `StatRegistry` asset.
-   - Use the inspector to add stats, specifying their ID, display name, default value, and categories.
+The `StatRegistry` is the central repository for all stat definitions. It defines what stats exist, their default values, and their categories.
 
-3. Optionally, use the `DefaultStatDefinitions` class to initialize common RPG stats:
+```csharp
+// Create a StatRegistry to define your game's stats
+StatRegistry registry = ScriptableObject.CreateInstance<StatRegistry>();
 
-   ```csharp
-   DefaultStatDefinitions.InitializeRegistry(statRegistry);
-   ```
+// Register stats manually
+registry.RegisterStat("health", "Health", 100f);
+registry.RegisterStat("mana", "Mana", 50f);
+registry.RegisterStat("strength", "Strength", 10f);
 
-## Step 2: Creating a Stat Collection
+// Optionally, use default RPG stats
+DefaultStatDefinitions.InitializeRegistry(registry);
+```
 
-A `StatCollection` is used to manage stats for a specific entity (e.g., a character or skill).
+### 2. Creating a Character's Stats
 
-1. Create a `StatCollection` in your script:
+The `StatCollection` is the core container that holds stat values and modifiers. Use it to manage a character's stats.
 
-   ```csharp
-   StatCollection characterStats = new StatCollection(statRegistry, debugStats: true, ownerName: "Player");
-   ```
+```csharp
+// Create a stat collection for your character
+StatCollection characterStats = new StatCollection(registry, debugStats: true, ownerName: "Player");
 
-2. Set base values for stats:
+// Set base values
+characterStats.SetBaseValue("strength", 15);
+characterStats.SetBaseValue("intelligence", 10);
+```
 
-   ```csharp
-   characterStats.SetBaseValue("health", 100f);
-   characterStats.SetBaseValue("strength", 10f);
-   ```
+### 3. Creating and Equipping Items
 
-3. Add modifiers to stats as needed:
+The item system allows you to create items that modify character stats.
 
-   ```csharp
-   characterStats.AddModifier(new StatModifier {
-       statId = "strength",
-       value = 5f,
-       applicationMode = StatApplicationMode.Additive,
-       source = "Item Bonus"
-   });
-   ```
+```csharp
+// Create an item
+Item sword = ScriptableObject.CreateInstance<Item>();
+sword.displayName = "Warrior's Sword";
+sword.explicitModifiers.Add(new ItemStatModifier {
+    statId = "strength",
+    value = 5,
+    applicationMode = StatApplicationMode.Additive,
+    scope = ModifierScope.Global
+});
 
-## Step 3: Integrating Skills
+// Equip the item
+ItemInstance swordInstance = sword.CreateInstance();
+swordInstance.ApplyModifiersToStats(characterStats);
+```
 
-The `SkillStatRegistry` maps character stats to skill stat groups.
+### 4. Applying Temporary Effects
 
-1. Create a `SkillStatRegistry` asset if it doesn't already exist:
-   - Right-click in the Project window.
-   - Select `Create > PathSurvivors > Stats > Skill Stat Registry`.
-   - Name the asset `SkillStatRegistry`.
+Temporary effects can be applied to stats for a limited duration.
 
-2. Define mappings between character stats and skill stat groups:
+```csharp
+// Apply a temporary buff
+characterStats.AddTemporaryPercentage("movement_speed", 50f, 10f, "Speed Potion");
+```
 
-   ```csharp
-   skillRegistry.RegisterCharacterStat("strength", SkillStatGroup.Physical | SkillStatGroup.Melee);
-   skillRegistry.RegisterCharacterStat("intelligence", SkillStatGroup.Damage | SkillStatGroup.Elemental);
-   ```
+## Advanced Features
 
-3. Create a `StatCollection` for a skill:
+### Working with Categories
 
-   ```csharp
-   StatCollection fireballSkill = new StatCollection(statRegistry, debugStats: true, ownerName: "Fireball");
-   fireballSkill.SetBaseValue("base_damage_min", 20);
-   fireballSkill.SetBaseValue("base_damage_max", 30);
-   ```
+Categories organize stats into logical groups, such as Offense, Defense, or Utility. They allow for filtering and specialized behavior.
 
-4. Apply character stats to the skill:
+```csharp
+// Define categories for a stat
+StatDefinition healthDef = registry.GetStatDefinition("health");
+healthDef.SetCategories(StatCategory.Defense);
+```
 
-   ```csharp
-   List<string> affectingStats = skillRegistry.GetAffectingStats(SkillStatGroup.FireProjectile);
-   foreach (string statId in affectingStats) {
-       float characterStatValue = characterStats.GetStatValue(statId);
-       fireballSkill.AddModifier(new StatModifier {
-           statId = "base_damage_min",
-           value = characterStatValue * 0.1f,
-           applicationMode = StatApplicationMode.Additive,
-           source = "Character Stat"
-       });
-   }
-   ```
+### Debugging Tools
 
-## Step 4: Adding Items
+The system includes debugging tools to help you test and refine your stats.
 
-Items can modify character stats when equipped or consumed.
+```csharp
+// Enable detailed logging
+characterStats.DebugStats = true;
 
-1. Create an `Item` ScriptableObject:
-
-   ```csharp
-   Item sword = ScriptableObject.CreateInstance<Item>();
-   sword.displayName = "Steel Sword";
-   sword.explicitModifiers.Add(new ItemStatModifier {
-       statId = "strength",
-       value = 5,
-       applicationMode = StatApplicationMode.Additive,
-       scope = ModifierScope.Global
-   });
-   ```
-
-2. Apply item modifiers to a character's stats:
-
-   ```csharp
-   ItemInstance swordInstance = sword.CreateInstance();
-   swordInstance.ApplyModifiersToStats(characterStats);
-   ```
-
-3. Remove item modifiers when unequipping:
-
-   ```csharp
-   swordInstance.RemoveModifiersFromStats(characterStats);
-   ```
-
-## Step 5: Debugging and Testing
-
-1. Enable debug mode for detailed logging:
-
-   ```csharp
-   characterStats.DebugStats = true;
-   ```
-
-2. Use the `Stats Debugger` window in the Unity Editor to view and modify stats during play mode.
-
-3. Log all registered stats for verification:
-
-   ```csharp
-   statRegistry.LogRegisteredStats();
-   ```
+// Generate a debug report
+Debug.Log(characterStats.CreateDebugReport());
+```
 
 ## Best Practices
 
-1. **Consistent IDs**: Use consistent stat IDs across items, characters, and skills.
-2. **Clear Categories**: Assign meaningful categories to stats for better organization.
-3. **Remove Modifiers**: Always remove old modifiers before applying new ones to avoid stacking issues.
-4. **Debugging**: Use debug logs and the Stats Debugger to troubleshoot issues.
+1. **Clear IDs**: Use consistent stat IDs across your project.
+2. **Proper Scopes**: Use `ModifierScope.Global` for character-wide effects.
+3. **Temporary Effects**: Always clean up temporary effects after they expire.
+4. **Debugging**: Use the built-in debugging tools to identify issues.
+5. **Modifier Management**: Remove old modifiers before applying new ones to avoid stacking issues.
+6. **Category Usage**: Ensure stats and modifiers are assigned to the correct categories for proper filtering.
 
-By following this guide, you can effectively integrate the PathSurvivors Stats System into your project and leverage its powerful features for managing stats, skills, and items.
+## Common Pitfalls and Solutions
+
+### 1. Stats Not Updating
+
+**Issue**: Stats don't update when items are equipped or modifiers are applied.
+
+**Solution**:
+- Ensure the `StatRegistry` is properly initialized and contains the required stat definitions.
+- Verify that the `ApplyModifiersToStats` method is called on the correct `StatCollection`.
+- Check that the modifier's `statId` matches the stat in the registry.
+
+### 2. Temporary Effects Persisting
+
+**Issue**: Temporary effects remain active after their duration expires.
+
+**Solution**:
+- Use the `AddTemporaryPercentage` or `AddTemporaryModifier` methods, which automatically handle expiration.
+- Ensure the `TimedModifierManager` is active and processing expired modifiers.
+
+### 3. Incorrect Modifier Application
+
+**Issue**: Modifiers are not applied as expected (e.g., additive instead of multiplicative).
+
+**Solution**:
+- Double-check the `applicationMode` of the modifier (e.g., `Additive`, `Multiplicative`).
+- Use debug logs to verify the modifier's values and application mode.
+
+### 4. Debugging Tips
+
+- Enable `DebugStats` on your `StatCollection` to log detailed information about stat changes.
+- Use the `CreateDebugReport` method to generate a summary of all active stats and modifiers.
+- Check the Unity Console for warnings or errors related to stat or modifier usage.
+
+## Next Steps
+
+- [Item System Documentation](ItemSystem.md): Learn how to create and manage items.
+- [Core Stats Documentation](CoreStats.md): Detailed information about the stats framework.
+- [Integration Examples](Examples.md): See practical examples of the system in action.
