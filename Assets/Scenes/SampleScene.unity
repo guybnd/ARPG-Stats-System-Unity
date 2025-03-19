@@ -128,7 +128,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 115633355}
-  - component: {fileID: 115633354}
+  - component: {fileID: 115633356}
   m_Layer: 0
   m_Name: GameObject
   m_TagString: Untagged
@@ -136,29 +136,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &115633354
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 115633353}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bd4fd4800ad56144db5123ecfc3cbc73, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  statRegistry: {fileID: 0}
-  statsText: {fileID: 0}
-  inventoryText: {fileID: 0}
-  equippedItemsText: {fileID: 0}
-  createWeaponButton: {fileID: 0}
-  createArmorButton: {fileID: 0}
-  createPotionButton: {fileID: 0}
-  equipItemButton: {fileID: 0}
-  unequipItemButton: {fileID: 0}
-  useItemButton: {fileID: 0}
-  rollModifiersButton: {fileID: 0}
 --- !u!4 &115633355
 Transform:
   m_ObjectHideFlags: 0
@@ -174,6 +151,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &115633356
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 115633353}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf05f30b4f956e44fbc49513f4196018, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  statRegistry: {fileID: 11400000, guid: 479aa9040a08858499901b5e166a8574, type: 2}
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
