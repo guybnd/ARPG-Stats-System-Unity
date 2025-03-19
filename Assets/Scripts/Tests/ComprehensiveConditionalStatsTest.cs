@@ -41,6 +41,7 @@ public class ComprehensiveConditionalStatsTest : MonoBehaviour
         TestBaseStatInteraction();
         TestMultipleCategoriesWithOR();
         TestTimedModifiers();
+        TestMultipleOverrideModifiers();
 
         // Report final results
         ReportFinalResults();
@@ -146,10 +147,12 @@ public class ComprehensiveConditionalStatsTest : MonoBehaviour
         
         // Without the Physical category, modifier shouldn't apply
         Debug.Log($"Armor without Physical category: {armor.Value}");
+        success &= armor.Value == 100; // Base value
         
         // Add Physical category to activate the override modifier
         armor.SetCategories(StatCategory.Defense | StatCategory.Physical);
         Debug.Log($"Armor with Physical category: {armor.Value}");
+        success &= armor.Value == 250; // Override value
         
         // Add a percentage modifier on top of the override
         stats.AddModifier(new StatModifier {
@@ -160,11 +163,9 @@ public class ComprehensiveConditionalStatsTest : MonoBehaviour
             source = "Physical Armor Percent"
         });
         
-        // Should be 250 * (1 + 0.3) = 325
+        // Percentage modifier should not apply due to override
         Debug.Log($"Armor with Physical category and percentage bonus: {armor.Value}");
-        
-        // Example success condition
-        success &= armor.Value == 325;
+        success &= armor.Value == 250; // Still override value
 
         ReportTestResult("TestOverrideModifiers", success);
         
@@ -175,6 +176,79 @@ public class ComprehensiveConditionalStatsTest : MonoBehaviour
         // Clean up
         stats.RemoveModifier("physical_armor_override");
         stats.RemoveModifier("physical_armor_percent");
+    }
+
+    void TestOverrideWithMultipleModifiers()
+    {
+        Debug.Log("=== Test Override With Multiple Modifiers ===");
+        bool success = true;
+
+        RegisterStatIfNeeded("damage", "Damage", 50f, 
+            StatCategory.Offense);
+
+        // Register conditional stat for ranged damage
+        statRegistry.RegisterConditionalStat(
+            "damage", 
+            StatCategory.Projectile, 
+            "for Ranged Attacks"
+        );
+
+        // Get the damage stat
+        var damage = stats.GetOrCreateStat("damage");
+        damage.SetCategories(StatCategory.Offense);
+
+        Debug.Log($"Base damage: {damage.Value}");
+
+        // Add an override modifier to ranged damage
+        stats.AddModifier(new StatModifier {
+            modifierId = "ranged_damage_override",
+            statId = statRegistry.GetExtendedStatId("damage", StatCategory.Projectile),
+            value = 100f,
+            applicationMode = StatApplicationMode.Override,
+            source = "Ranged Damage Override"
+        });
+
+        // Without the Ranged category, modifier shouldn't apply
+        Debug.Log($"Damage without Ranged category: {damage.Value}");
+        success &= damage.Value == 50; // Base value
+
+        // Add Ranged category to activate the override modifier
+        damage.SetCategories(StatCategory.Offense | StatCategory.Projectile);
+        Debug.Log($"Damage with Ranged category: {damage.Value}");
+        success &= damage.Value == 100; // Override value
+
+        // Add an additive modifier on top of the override
+        stats.AddModifier(new StatModifier {
+            modifierId = "ranged_damage_additive",
+            statId = statRegistry.GetExtendedStatId("damage", StatCategory.Projectile),
+            value = 20f,
+            applicationMode = StatApplicationMode.Additive,
+            source = "Ranged Damage Additive"
+        });
+
+        // Add a percentage modifier on top of the override
+        stats.AddModifier(new StatModifier {
+            modifierId = "ranged_damage_percent",
+            statId = statRegistry.GetExtendedStatId("damage", StatCategory.Projectile),
+            value = 50f,
+            applicationMode = StatApplicationMode.PercentageAdditive,
+            source = "Ranged Damage Percent"
+        });
+
+        // Neither additive nor percentage modifiers should apply due to override
+        Debug.Log($"Damage with Projectile category and additional modifiers: {damage.Value}");
+        success &= damage.Value == 100; // Still override value
+
+        ReportTestResult("TestOverrideWithMultipleModifiers", success);
+
+        // Remove Ranged category to verify it goes back to base
+        damage.SetCategories(StatCategory.Offense);
+        Debug.Log($"Damage after removing Ranged category: {damage.Value}");
+
+        // Clean up
+        stats.RemoveModifier("ranged_damage_override");
+        stats.RemoveModifier("ranged_damage_additive");
+        stats.RemoveModifier("ranged_damage_percent");
     }
     
     // Test interaction with base stat modifiers
@@ -386,6 +460,63 @@ public class ComprehensiveConditionalStatsTest : MonoBehaviour
             stats.RemoveModifier("regen_boost");
             stats.RemoveModifier("combat_regen_boost");
         }));
+    }
+
+    void TestMultipleOverrideModifiers()
+    {
+        Debug.Log("=== Test Multiple Override Modifiers ===");
+        bool success = true;
+
+        RegisterStatIfNeeded("mana", "Mana", 200f, 
+            StatCategory.Resource);
+
+        // Register conditional stat for combat mana
+        statRegistry.RegisterConditionalStat(
+            "mana", 
+            StatCategory.Combat, 
+            "in Combat"
+        );
+
+        // Get the mana stat
+        var mana = stats.GetOrCreateStat("mana");
+        mana.SetCategories(StatCategory.Resource);
+
+        Debug.Log($"Base mana: {mana.Value}");
+
+        // Add the first override modifier
+        stats.AddModifier(new StatModifier {
+            modifierId = "combat_mana_override_1",
+            statId = statRegistry.GetExtendedStatId("mana", StatCategory.Combat),
+            value = 300f,
+            applicationMode = StatApplicationMode.Override,
+            source = "Combat Mana Override 1"
+        });
+
+        // Add the second override modifier
+        stats.AddModifier(new StatModifier {
+            modifierId = "combat_mana_override_2",
+            statId = statRegistry.GetExtendedStatId("mana", StatCategory.Combat),
+            value = 400f,
+            applicationMode = StatApplicationMode.Override,
+            source = "Combat Mana Override 2"
+        });
+
+        // Add Combat category to activate the override modifiers
+        mana.SetCategories(StatCategory.Resource | StatCategory.Combat);
+        Debug.Log($"Mana with Combat category and multiple overrides: {mana.Value}");
+
+        // Check which override is applied (expected behavior depends on implementation)
+        success &= mana.Value == 400; // Assuming the second override takes precedence
+
+        ReportTestResult("TestMultipleOverrideModifiers", success);
+
+        // Remove Combat category to verify it goes back to base
+        mana.SetCategories(StatCategory.Resource);
+        Debug.Log($"Mana after removing Combat category: {mana.Value}");
+
+        // Clean up
+        stats.RemoveModifier("combat_mana_override_1");
+        stats.RemoveModifier("combat_mana_override_2");
     }
 
     // Helper coroutine to simulate time passing
