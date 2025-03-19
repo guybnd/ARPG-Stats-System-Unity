@@ -13,10 +13,4 @@ MonoBehaviour:
   m_Name: Test Registry
   m_EditorClassIdentifier: 
   statDefinitions: []
-  conditionalStats:
-  - baseStatId: base_damage
-    conditions: 65536
-    displaySuffix: with Fire
-  - baseStatId: base_damage
-    conditions: 256
-    displaySuffix: with Projectiles
+  conditionalStats: []

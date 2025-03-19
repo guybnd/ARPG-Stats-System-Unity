@@ -7,29 +7,50 @@ public class ComprehensiveConditionalStatsTest : MonoBehaviour
     private StatRegistry statRegistry;
 
     private StatCollection stats;
-    
+
+    private int totalTests = 0;
+    private int passedTests = 0;
+
+    private void ReportTestResult(string testName, bool success)
+    {
+        totalTests++;
+        if (success)
+        {
+            passedTests++;
+            Debug.Log($"[PASS] {testName}");
+        }
+        else
+        {
+            Debug.LogError($"[FAIL] {testName}");
+        }
+    }
+
+    private void ReportFinalResults()
+    {
+        Debug.Log($"=== Test Results: {passedTests}/{totalTests} tests passed ===");
+    }
+
     void Start()
     {
         // Create our stat collection
         stats = new StatCollection(statRegistry, true, "ComprehensiveConditionalStatsTest");
 
-        // Test 1: Test stacking of different application modes
+        // Run tests
         TestStackingOfApplicationModes();
-        
-        // Test 2: Test override modifiers with conditional stats
         TestOverrideModifiers();
-        
-        // Test 3: Test interaction with base stat modifiers
         TestBaseStatInteraction();
-        
-        // Test 4: Test multiple category conditions with OR relationship
         TestMultipleCategoriesWithOR();
+        TestTimedModifiers();
+
+        // Report final results
+        ReportFinalResults();
     }
     
     // Test stacking of different application modes
     void TestStackingOfApplicationModes()
     {
         Debug.Log("=== Test Stacking of Application Modes ===");
+        bool success = true;
         
         RegisterStatIfNeeded("critical_damage", "Critical Damage", 150f, 
             StatCategory.Offense | StatCategory.Combat);
@@ -81,6 +102,11 @@ public class ComprehensiveConditionalStatsTest : MonoBehaviour
         // Should be (150 + 50) * (1 + 0.2) * 1.5 = 360
         Debug.Log($"Critical damage with Core category: {critDamage.Value}");
         
+        // Example success condition
+        success &= critDamage.Value == 360;
+
+        ReportTestResult("TestStackingOfApplicationModes", success);
+        
         // Clean up
         stats.RemoveModifier("spell_crit_flat");
         stats.RemoveModifier("spell_crit_percent");
@@ -91,6 +117,7 @@ public class ComprehensiveConditionalStatsTest : MonoBehaviour
     void TestOverrideModifiers()
     {
         Debug.Log("=== Test Override Modifiers ===");
+        bool success = true;
         
         RegisterStatIfNeeded("armor", "Armor", 100f, 
             StatCategory.Defense);
@@ -136,6 +163,11 @@ public class ComprehensiveConditionalStatsTest : MonoBehaviour
         // Should be 250 * (1 + 0.3) = 325
         Debug.Log($"Armor with Physical category and percentage bonus: {armor.Value}");
         
+        // Example success condition
+        success &= armor.Value == 325;
+
+        ReportTestResult("TestOverrideModifiers", success);
+        
         // Remove Physical category to verify it goes back to base
         armor.SetCategories(StatCategory.Defense);
         Debug.Log($"Armor after removing Physical category: {armor.Value}");
@@ -149,6 +181,7 @@ public class ComprehensiveConditionalStatsTest : MonoBehaviour
     void TestBaseStatInteraction()
     {
         Debug.Log("=== Test Base Stat Interaction ===");
+        bool success = true;
         
         RegisterStatIfNeeded("movement_speed", "Movement Speed", 100f, 
             StatCategory.Utility);
@@ -194,6 +227,11 @@ public class ComprehensiveConditionalStatsTest : MonoBehaviour
         // Should be 100 * (1 + 0.2 - 0.3) = 90
         Debug.Log($"Movement speed with Combat category: {moveSpeed.Value}");
         
+        // Example success condition
+        success &= moveSpeed.Value == 90;
+
+        ReportTestResult("TestBaseStatInteraction", success);
+        
         // Remove Combat category to verify it goes back to just the base bonus
         moveSpeed.SetCategories(StatCategory.Utility);
         Debug.Log($"Movement speed after removing Combat category: {moveSpeed.Value}");
@@ -207,6 +245,7 @@ public class ComprehensiveConditionalStatsTest : MonoBehaviour
     void TestMultipleCategoriesWithOR()
     {
         Debug.Log("=== Test Multiple Categories with OR Relationship ===");
+        bool success = true;
         
         // This test will have two separate conditional stats: one for Fire and one for Cold
         // They won't use a single conditional stat that requires both categories
@@ -265,9 +304,95 @@ public class ComprehensiveConditionalStatsTest : MonoBehaviour
         resistance.SetCategories(StatCategory.Defense | StatCategory.Fire | StatCategory.Cold);
         Debug.Log($"Resistance with both Fire and Cold categories: {resistance.Value}");
         
+        // Example success condition
+        success &= resistance.Value == 70; // Example for Fire + Cold
+
+        ReportTestResult("TestMultipleCategoriesWithOR", success);
+        
         // Clean up
         stats.RemoveModifier("fire_resist");
         stats.RemoveModifier("cold_resist");
+    }
+
+    // Test interaction with timed modifiers
+    void TestTimedModifiers()
+    {
+        Debug.Log("=== Test Timed Modifiers ===");
+        bool success = true;
+
+        RegisterStatIfNeeded("health_regen", "Health Regeneration", 10f, 
+            StatCategory.Utility);
+
+        // Register conditional stat for Combat category
+        statRegistry.RegisterConditionalStat(
+            "health_regen", 
+            StatCategory.Combat, 
+            "in Combat"
+        );
+
+        // Get the health regeneration stat
+        var healthRegen = stats.GetOrCreateStat("health_regen");
+        healthRegen.SetCategories(StatCategory.Utility);
+
+        Debug.Log($"Base health regeneration: {healthRegen.Value}");
+
+        // Add a timed modifier to the stat
+        stats.AddModifier(new StatModifier {
+            modifierId = "regen_boost",
+            statId = "health_regen",
+            value = 5f,
+            applicationMode = StatApplicationMode.Additive,
+            source = "Regen Boost",
+            duration = 5f // Modifier lasts for 5 seconds
+        });
+
+        Debug.Log($"Health regeneration with timed boost: {healthRegen.Value}");
+
+        // Add a conditional timed modifier
+        stats.AddModifier(new StatModifier {
+            modifierId = "combat_regen_boost",
+            statId = statRegistry.GetExtendedStatId("health_regen", StatCategory.Combat),
+            value = 10f,
+            applicationMode = StatApplicationMode.Additive,
+            source = "Combat Regen Boost",
+            duration = 3f // Modifier lasts for 3 seconds
+        });
+
+        // Without Combat category, conditional modifier shouldn't apply
+        Debug.Log($"Health regeneration without Combat category: {healthRegen.Value}");
+        success &= healthRegen.Value == 15; // Only the timed boost applies
+
+        // Add Combat category to activate the conditional modifier
+        healthRegen.SetCategories(StatCategory.Utility | StatCategory.Combat);
+        Debug.Log($"Health regeneration with Combat category: {healthRegen.Value}");
+        success &= healthRegen.Value == 25; // Both modifiers apply
+
+        // Add a normal timer to remove the Combat category after 4 seconds
+        StartCoroutine(SimulateTime(4f, () => {
+            healthRegen.SetCategories(StatCategory.Utility);
+            Debug.Log($"Health regeneration after removing Combat category: {healthRegen.Value}");
+            success &= healthRegen.Value == 15; // Only the timed boost applies
+        }));
+
+        // Example success conditions
+        StartCoroutine(SimulateTime(6f, () => {
+            Debug.Log($"Final health regeneration: {healthRegen.Value}");
+            success &= healthRegen.Value == 10; // After all modifiers expire
+            ReportTestResult("TestTimedModifiers", success);
+        }));
+
+        // Clean up
+        StartCoroutine(SimulateTime(6f, () => {
+            stats.RemoveModifier("regen_boost");
+            stats.RemoveModifier("combat_regen_boost");
+        }));
+    }
+
+    // Helper coroutine to simulate time passing
+    private System.Collections.IEnumerator SimulateTime(float seconds, System.Action callback)
+    {
+        yield return new WaitForSeconds(seconds);
+        callback?.Invoke();
     }
     
     // Helper method to register a stat if it doesn't exist
