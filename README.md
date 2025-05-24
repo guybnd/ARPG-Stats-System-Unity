@@ -1,4 +1,4 @@
-# PathSurvivors Stats System Documentation
+# ARPG Stats System Documentation
 
 ## Overview
 
